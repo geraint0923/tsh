@@ -12,6 +12,6 @@ It will include the following features:
 
 2. Environment variables
 
-3. I/O redirect
+3. I/O redirect, including file
 
 4. Pipe
