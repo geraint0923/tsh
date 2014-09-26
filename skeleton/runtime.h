@@ -55,6 +55,7 @@
 
 
 #include <unistd.h>
+#include "list.h"
 
 struct io_config {
 	int input_fd;
@@ -71,25 +72,36 @@ typedef struct command_t
   int bg;
   int argc;
   struct io_config io_cfg;
+  pid_t pid;
   char* argv[];
 } commandT;
 
-
 struct working_job {
+	int job_id;
+	struct working_proc *proc_seq;
+	struct list_item *item;
+	int count;
+};
+
+struct working_proc {
 	char *cmdline;
 	pid_t pid;
+	struct working_job *job;
+	int done;	// if done to be 1
 };
 
 /* to operate the foregound and background jobs list */
-extern void add_fg_job(commandT *cmd);
+extern void init_job_list();
 
-extern void add_bg_job(commandT *cmd);
+extern struct working_job *create_working_job(commandT **cmd, int n);
 
-extern void remove_fg_job(struct working_job *job);
+extern void add_bg_job(struct working_job *job);
 
 extern void remove_bg_job(struct working_job *job);
 
-extern struct working_job *find_bg_job_by_pid(pid_t pid);
+extern struct working_job *find_bg_job_by_id(int job_id);
+
+extern void release_working_job(struct working_job *job);
 
 
 /************Global Variables*********************************************/

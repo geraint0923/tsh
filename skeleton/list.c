@@ -23,10 +23,18 @@ void release_list_item(struct list_item *item) {
 		free(item);
 }
 
-void list_append_item(struct list_item *head, struct list_item *item) {
+struct list_item *list_append_item(struct list_item *head, struct list_item *item) {
+	struct list_item *ptr, *prev;
 	assert(head && item);
-	item->next = head->next;
-	head->next = item;
+	ptr = head->next;
+	prev = head;
+	while(ptr) {
+		prev = ptr;
+		ptr = ptr->next;
+	}
+	prev->next = item;
+	item->next = NULL;
+	return prev;
 }
 
 void list_remove_item(struct list_item *prev, struct list_item *item) {

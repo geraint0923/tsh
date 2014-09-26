@@ -55,6 +55,7 @@
 #include "runtime.h"
 #include "io.h"
 #include "builtin_cmd.h"
+#include "list.h"
 
 /************Defines and Typedefs*****************************************/
 /*  #defines and typedefs should have their names in all caps.
@@ -67,15 +68,21 @@
 
 #define NBUILTINCOMMANDS (sizeof BuiltInCommands / sizeof(char*))
 
+/*
 typedef struct bgjob_l {
   pid_t pid;
   struct bgjob_l* next;
 } bgjobL;
+*/
 
 struct io_config default_io_config = { 0, 1 };
 
+struct list_item *bg_job_list = NULL;
+
+struct working_job *current_fg_job = NULL;
+
 /* the pids of the background processes */
-bgjobL *bgjobs = NULL;
+//bgjobL *bgjobs = NULL;
 
 /************Function Prototypes******************************************/
 /* run command */
@@ -93,6 +100,83 @@ static bool IsBuiltIn(char*);
 /************External Declaration*****************************************/
 
 /**************Implementation***********************************************/
+
+void init_job_list() {
+	bg_job_list = create_list();
+	assert(bg_job_list);
+}
+
+struct working_job *create_working_job(commandT **cmd, int n) {
+	int i;
+	struct working_job *job = (struct working_job*)malloc(sizeof(struct working_job));
+	assert(job);
+	job->job_id = -1;
+	job->item = NULL;
+	job->proc_seq = (struct working_proc*)malloc(sizeof(struct working_proc)*n);
+	job->count = n;
+	assert(job->proc_seq);
+	for(i = 0; i < n; i++) {
+		job->proc_seq[i].cmdline = strdup(cmd[i]->cmdline);
+		job->proc_seq[i].pid = cmd[i]->pid;
+		job->proc_seq[i].done = 0;
+		job->proc_seq[i].job = job;
+	}
+	return job;
+}
+
+void add_bg_job(struct working_job *job) {
+	struct list_item *item, *prev;
+	assert(bg_job_list);
+	item = create_list_item();
+	assert(item);
+	item->item_val = (void*)job;
+	job->item = item;
+	prev = list_append_item(bg_job_list, item);
+	assert(prev);
+	if(prev == bg_job_list)
+		job->job_id = 1;
+	else
+		job->job_id = ((struct working_job*)prev->item_val)->job_id + 1;
+}
+
+void remvoe_bg_job(struct working_job *job) {
+	struct list_item *item;
+	assert(bg_job_list && job->item);
+	item = bg_job_list;
+	while(item->next && item->next != job->item)
+		item = item->next;
+	if(item->next == job->item) {
+		job->item = NULL;
+		item->next = item->next->next;
+		release_list_item(item->next);
+	}
+}
+
+struct working_job *find_bg_job_by_id(int job_id) {
+	struct list_item *item = bg_job_list->next;
+	struct working_job *job;
+	if(item != NULL) {
+		while(item) {
+			job = (struct working_job*)item->item_val;
+			assert(job);
+			if(job->job_id == job_id)
+				return job;
+		}
+	}
+	return NULL;
+}
+
+void release_working_job(struct working_job *job) {
+	int i;
+	assert(job);
+	for(i = 0; i < job->count; i++) {
+		assert(job->proc_seq[i].cmdline);
+		free(job->proc_seq[i].cmdline);
+	}
+	assert(job->proc_seq);
+	free(job->proc_seq);
+	free(job);
+}
 
 /* preprocess to make the pipe done
  * file redirect will be done after fork
