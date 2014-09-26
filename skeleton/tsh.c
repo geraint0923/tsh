@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <string.h>
+#include <stdio.h>
 
 /************Private include**********************************************/
 #include "tsh.h"
@@ -63,7 +64,7 @@ static void sig(int);
 int main (int argc, char *argv[])
 {
   /* Initialize command buffer */
-  char* cmdLine = malloc(sizeof(char*)*BUFSIZE);
+  char* cmdLine = (char*)malloc(sizeof(char*)*BUFSIZE);
 
   /* shell initialization */
   if (signal(SIGINT, sig) == SIG_ERR) PrintPError("SIGINT");
@@ -71,6 +72,10 @@ int main (int argc, char *argv[])
 
   while (!forceExit) /* repeat forever */
   {
+
+	  /* print prompt */
+	  printf("%s@localhost %s $ ", getLogin(), getCurrentWorkingDir());
+
     /* read command line */
     getCommandLine(&cmdLine, BUFSIZE);
 

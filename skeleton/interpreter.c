@@ -163,7 +163,9 @@ void Interpret(char* cmdLine)
     }
   }
 
-  command = (commandT **) malloc(sizeof(commandT *) * task);
+  /* we allocate one more pointer to indicate the end of command list */
+  command = (commandT **) malloc(sizeof(commandT *) * (task+1));
+  command[task] = NULL;
   i = strlen(cmdLine) - 1;
   while(i >= 0 && cmdLine[i] == ' ') i--;
   if(cmdLine[i] == '&'){

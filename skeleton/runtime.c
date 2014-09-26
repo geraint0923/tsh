@@ -48,10 +48,13 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <string.h>
+#include <stdio.h>
 
 /************Private include**********************************************/
 #include "runtime.h"
 #include "io.h"
+#include "builtin_cmd.h"
 
 /************Defines and Typedefs*****************************************/
 /*  #defines and typedefs should have their names in all caps.
@@ -199,12 +202,26 @@ static void Exec(commandT* cmd, bool forceFork)
 
 static bool IsBuiltIn(char* cmd)
 {
+	int i;
+	for(i = 0; i < builtin_cmd_nr; i++) {
+		if(cmd && builtin_cmd_list[i].cmd_name 
+				&& !strcmp(builtin_cmd_list[i].cmd_name, cmd))
+			return TRUE;
+	}
   return FALSE;     
 }
 
 
 static void RunBuiltInCmd(commandT* cmd)
 {
+	int i;
+	for(i = 0; i < builtin_cmd_nr; i++) {
+		if(builtin_cmd_list[i].cmd_name && builtin_cmd_list[i].cmd_handler 
+				&& !strcmp(builtin_cmd_list[i].cmd_name, cmd->argv[0])) {
+			builtin_cmd_list[i].cmd_handler(cmd, default_io_config);
+			break;
+		}
+	}
 }
 
 void CheckJobs()
@@ -215,7 +232,7 @@ void CheckJobs()
 commandT* CreateCmdT(int n)
 {
   int i;
-  commandT * cd = malloc(sizeof(commandT) + sizeof(char *) * (n + 1));
+  commandT * cd = (commandT*)malloc(sizeof(commandT) + sizeof(char *) * (n + 1));
   cd -> name = NULL;
   cd -> cmdline = NULL;
   cd -> is_redirect_in = cd -> is_redirect_out = 0;
@@ -236,4 +253,17 @@ void ReleaseCmdT(commandT **cmd){
   for(i = 0; i < (*cmd)->argc; i++)
     if((*cmd)->argv[i] != NULL) free((*cmd)->argv[i]);
   free(*cmd);
+}
+
+char *getLogin() {
+	return getlogin();
+}
+
+#define MAX_PATH_LEN	(1024)
+static char cwd_buffer[MAX_PATH_LEN];
+char *getCurrentWorkingDir() {
+	char *ret = getcwd(cwd_buffer, MAX_PATH_LEN);
+	if(!ret)
+		cwd_buffer[0] = 0;
+	return cwd_buffer;
 }
