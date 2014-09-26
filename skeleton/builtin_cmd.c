@@ -27,6 +27,17 @@ static void cd_handler(commandT *cmd) {
 }
 
 static void echo_handler(commandT *cmd) {
+	int ret, i;
+	for(i = 1; i < cmd->argc; i++) {
+		ret = write(cmd->io_cfg.output_fd, cmd->argv[i], strlen(cmd->argv[i]));
+		if(i != cmd->argc - 1)
+			ret = write(cmd->io_cfg.output_fd, " ", 1);
+		if(ret == -1)
+			perror("write");
+	}
+	ret = write(cmd->io_cfg.output_fd, "\n", 1);
+	if(ret == -1)
+		perror("write");
 }
 
 static void fg_handler(commandT *cmd) {

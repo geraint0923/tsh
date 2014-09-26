@@ -316,12 +316,23 @@ static bool IsBuiltIn(char* cmd)
 }
 
 
+static void procBuiltinRedirect(commandT *cmd) {
+	if(cmd->is_redirect_in) {
+		cmd->io_cfg.input_fd = open(cmd->redirect_in, O_RDONLY);
+	}
+	if(cmd->is_redirect_out) {
+		cmd->io_cfg.output_fd = open(cmd->redirect_out, O_APPEND | O_CREAT | O_WRONLY,
+				S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+	}
+}
+
 static void RunBuiltInCmd(commandT* cmd)
 {
 	int i;
 	for(i = 0; i < builtin_cmd_nr; i++) {
 		if(builtin_cmd_list[i].cmd_name && builtin_cmd_list[i].cmd_handler 
 				&& !strcmp(builtin_cmd_list[i].cmd_name, cmd->argv[0])) {
+			procBuiltinRedirect(cmd);
 			builtin_cmd_list[i].cmd_handler(cmd);
 			break;
 		}
