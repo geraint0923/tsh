@@ -107,6 +107,8 @@ static int pipeCmd(commandT **cmd, int n) {
 		cmd[i]->io_cfg.input_fd = pp[0];
 		if(i != n-1) {
 			//TODO genterate a pair of pipe
+			//FIXME for a piped program, only one fd 
+			//	will be closed after fork
 			ret = pipe(pp);
 		} else
 			pp[1] = default_io_config.output_fd;
@@ -118,6 +120,8 @@ static int pipeCmd(commandT **cmd, int n) {
 }
 
 static int preProcCmd(commandT **cmd, int n) {
+	//TODO if anyone is background, then set all to background
+	//FIXME
 	return pipeCmd(cmd, n);
 }
 
@@ -262,6 +266,7 @@ static bool ResolveExternalCmd(commandT* cmd)
 static void Exec(commandT* cmd, bool forceFork)
 {
 	pid_t pid;
+	int fd;
 	assert(forceFork == TRUE);
 	if(forceFork) {
 		if(!(pid = fork())) {
@@ -273,6 +278,19 @@ static void Exec(commandT* cmd, bool forceFork)
 			if(cmd->io_cfg.output_fd != 1) {
 				dup2(cmd->io_cfg.output_fd, 1);
 				close(cmd->io_cfg.output_fd);
+			}
+
+			//TODO deal with file redirect
+			if(cmd->is_redirect_in) {
+				fd = open(cmd->redirect_in, O_RDONLY);
+				dup2(fd, 0);
+				close(fd);
+			}
+			if(cmd->is_redirect_out) {
+				fd = open(cmd->redirect_out, O_APPEND | O_CREAT | O_WRONLY,
+						S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+				dup2(fd, 1);
+				close(fd);
 			}
 
 			if(execv(cmd->name, cmd->argv)) {
