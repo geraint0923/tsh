@@ -118,7 +118,10 @@ struct working_job *create_working_job(commandT **cmd, int n) {
 	for(i = 0; i < n; i++) {
 		job->proc_seq[i].cmdline = strdup(cmd[i]->cmdline);
 		job->proc_seq[i].pid = cmd[i]->pid;
-		job->proc_seq[i].done = 0;
+		if(cmd[i]->is_builtin)
+			job->proc_seq[i].done = 1;
+		else
+			job->proc_seq[i].done = 0;
 		job->proc_seq[i].job = job;
 	}
 	return job;
@@ -189,6 +192,7 @@ static int pipeCmd(commandT **cmd, int n) {
 	pp[1] = default_io_config.output_fd;
 	for(i = 0; i < n; i++) {
 		cmd[i]->io_cfg.input_fd = pp[0];
+		cmd[i]->useless_fd[0] = pp[1];
 		if(i != n-1) {
 			//TODO genterate a pair of pipe
 			//FIXME for a piped program, only one fd 
@@ -197,6 +201,7 @@ static int pipeCmd(commandT **cmd, int n) {
 		} else
 			pp[1] = default_io_config.output_fd;
 		cmd[i]->io_cfg.output_fd = pp[1];
+		cmd[i]->useless_fd[1] = pp[0];
 	}
 	if(ret)
 		perror("pipe");
@@ -219,6 +224,17 @@ static void cleanPipe(commandT **cmd, int n) {
 	}
 }
 
+static void genterateJob(commandT **cmd, int n) {
+	int i;
+	struct working_job *job;
+	job = create_working_job(cmd, n);
+	for(i = 0; i < n; i++)
+		if(cmd[i]->bg)
+			current_fg_job = NULL;
+		else
+			current_fg_job = job;
+}
+
 static void cleanAll(commandT **cmd, int n) {
 	int i;
 	cleanPipe(cmd, n);
@@ -227,6 +243,19 @@ static void cleanAll(commandT **cmd, int n) {
 }
 
 static void waitForCmd() {
+	int i, stat;
+	struct working_proc *proc;
+	assert(current_fg_job);
+	printf("count ===>>> %d\n", current_fg_job->count);
+	for(i = 0; i < current_fg_job->count; i++) {
+		proc = &(current_fg_job->proc_seq[i]);
+		assert(proc);
+//		printf("proc => 0x%08x\n", proc);
+		if(!proc->done) {
+			waitpid(proc->pid, &stat, 0);
+			printf("reap %d cmd => %s\n", proc->pid, proc->cmdline);
+		}
+	}
 }
 
 int total_task;
@@ -247,10 +276,17 @@ void RunCmd(commandT** cmd, int n)
       ReleaseCmdT(&cmd[i]);
   }
   */
-  for(i = 0; i < n; i++)
+  for(i = 0; i < n; i++) {
 	  RunCmdFork(cmd[i], TRUE);
+	  //printf("%s => bg = %d\n", cmd[i]->cmdline, cmd[i]->bg);
+  }
+  genterateJob(cmd, n);
   cleanAll(cmd, n);
-  waitForCmd();
+  if(current_fg_job)
+	  waitForCmd();
+  else {
+	  //TODO add to bg_job_list
+  }
 }
 
 void RunCmdFork(commandT* cmd, bool fork)
@@ -259,10 +295,12 @@ void RunCmdFork(commandT* cmd, bool fork)
     return;
   if (IsBuiltIn(cmd->argv[0]))
   {
+	  cmd->is_builtin = 1;
     RunBuiltInCmd(cmd);
   }
   else
   {
+	  cmd->is_builtin = 0;
     RunExternalCmd(cmd, fork);
   }
 }
@@ -296,6 +334,8 @@ static void RunExternalCmd(commandT* cmd, bool fork)
   }
   else {
     printf("%s: command not found\n", cmd->argv[0]);
+    cmd->is_builtin = 1;
+    cmd->pid = -1;
     fflush(stdout);
     //ReleaseCmdT(&cmd);
   }
@@ -350,7 +390,7 @@ static bool ResolveExternalCmd(commandT* cmd)
 static void Exec(commandT* cmd, bool forceFork)
 {
 	pid_t pid;
-	int fd;
+	int fd, i;
 	assert(forceFork == TRUE);
 	if(forceFork) {
 		if(!(pid = fork())) {
@@ -377,6 +417,10 @@ static void Exec(commandT* cmd, bool forceFork)
 				close(fd);
 			}
 
+			for(i = 0; i < 2; i++)
+				if(cmd->useless_fd[i] != 0 && cmd->useless_fd[i] != 1)
+					close(cmd->useless_fd[i]);
+
 			if(execv(cmd->name, cmd->argv)) {
 				perror("execv");
 				exit(-1);
@@ -384,6 +428,7 @@ static void Exec(commandT* cmd, bool forceFork)
 		} 
 		//TODO deal with the pid
 		//FIXME
+		cmd->pid = pid;
 		printf("pid => %d\n", pid);
 	}
 }
@@ -418,6 +463,7 @@ static void RunBuiltInCmd(commandT* cmd)
 				&& !strcmp(builtin_cmd_list[i].cmd_name, cmd->argv[0])) {
 			procBuiltinRedirect(cmd);
 			builtin_cmd_list[i].cmd_handler(cmd);
+			cmd->pid = -1;
 			break;
 		}
 	}
