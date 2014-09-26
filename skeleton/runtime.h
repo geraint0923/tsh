@@ -53,6 +53,14 @@
 #define VAREXTERN(x, y) extern x;
 #endif
 
+struct io_config {
+	int input_fd;
+	int output_fd;
+};
+
+
+extern struct io_config default_io_config;
+
 typedef struct command_t
 {
   char* name;
@@ -61,6 +69,7 @@ typedef struct command_t
   int is_redirect_in, is_redirect_out;
   int bg;
   int argc;
+  struct io_config io_cfg;
   char* argv[];
 } commandT;
 

@@ -114,6 +114,7 @@ void parser_single(char *c, int sz, commandT** cd, int bg)
   //printf("%d\n",task_argc);
   (*cd) = CreateCmdT(task_argc);
   (*cd) -> bg = bg;
+  (*cd)->io_cfg = default_io_config;
   (*cd)->cmdline = strdup(c);
   tmp = c;
   for(i = 0; i < task_argc; i++){

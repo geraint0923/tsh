@@ -72,6 +72,8 @@ typedef struct bgjob_l {
   struct bgjob_l* next;
 } bgjobL;
 
+struct io_config default_io_config = { 0, 1 };
+
 /* the pids of the background processes */
 bgjobL *bgjobs = NULL;
 
@@ -91,11 +93,64 @@ static bool IsBuiltIn(char*);
 /************External Declaration*****************************************/
 
 /**************Implementation***********************************************/
+
+/* preprocess to make the pipe done
+ * file redirect will be done after fork
+ * dup2 pipe -> close old pipe -> file open -> dup2 file
+ * clean all open pipe after all cmd detach and then waitpid
+ * */
+static int pipeCmd(commandT **cmd, int n) {
+	int i, pp[2], ret = 0;
+	pp[0] = default_io_config.input_fd;
+	pp[1] = default_io_config.output_fd;
+	for(i = 0; i < n; i++) {
+		cmd[i]->io_cfg.input_fd = pp[0];
+		if(i != n-1) {
+			//TODO genterate a pair of pipe
+			ret = pipe(pp);
+		} else
+			pp[1] = default_io_config.output_fd;
+		cmd[i]->io_cfg.output_fd = pp[1];
+	}
+	if(ret)
+		perror("pipe");
+	return ret;
+}
+
+static int preProcCmd(commandT **cmd, int n) {
+	return pipeCmd(cmd, n);
+}
+
+static void cleanPipe(commandT **cmd, int n) {
+	int i;
+	for(i = 0; i < n; i++) {
+		if(cmd[i]->io_cfg.input_fd != 0)
+			close(cmd[i]->io_cfg.input_fd);
+		if(cmd[i]->io_cfg.output_fd != 1)
+			close(cmd[i]->io_cfg.output_fd);
+	}
+}
+
+static void cleanAll(commandT **cmd, int n) {
+	int i;
+	cleanPipe(cmd, n);
+	for(i = 0; i < n; i++)
+		ReleaseCmdT(&cmd[i]);
+}
+
+static void waitForCmd() {
+}
+
 int total_task;
 void RunCmd(commandT** cmd, int n)
 {
   int i;
   total_task = n;
+  if(preProcCmd(cmd, n)) {
+	  cleanAll(cmd, n);
+	  return;
+  }
+  /*
   if(n == 1)
     RunCmdFork(cmd[0], TRUE);
   else{
@@ -103,6 +158,11 @@ void RunCmd(commandT** cmd, int n)
     for(i = 0; i < n; i++)
       ReleaseCmdT(&cmd[i]);
   }
+  */
+  for(i = 0; i < n; i++)
+	  RunCmdFork(cmd[i], TRUE);
+  cleanAll(cmd, n);
+  waitForCmd();
 }
 
 void RunCmdFork(commandT* cmd, bool fork)
@@ -119,6 +179,7 @@ void RunCmdFork(commandT* cmd, bool fork)
   }
 }
 
+/*
 void RunCmdBg(commandT* cmd)
 {
   // TODO
@@ -135,6 +196,7 @@ void RunCmdRedirOut(commandT* cmd, char* file)
 void RunCmdRedirIn(commandT* cmd, char* file)
 {
 }
+*/
 
 
 /*Try to run an external command*/
@@ -142,11 +204,12 @@ static void RunExternalCmd(commandT* cmd, bool fork)
 {
   if (ResolveExternalCmd(cmd)){
     Exec(cmd, fork);
+    //TODO add to running list
   }
   else {
     printf("%s: command not found\n", cmd->argv[0]);
     fflush(stdout);
-    ReleaseCmdT(&cmd);
+    //ReleaseCmdT(&cmd);
   }
 }
 
@@ -198,6 +261,29 @@ static bool ResolveExternalCmd(commandT* cmd)
 
 static void Exec(commandT* cmd, bool forceFork)
 {
+	pid_t pid;
+	assert(forceFork == TRUE);
+	if(forceFork) {
+		if(!(pid = fork())) {
+			//TODO deal with pipe and redirect
+			if(cmd->io_cfg.input_fd != 0) {
+				dup2(cmd->io_cfg.input_fd, 0);
+				close(cmd->io_cfg.input_fd);
+			}
+			if(cmd->io_cfg.output_fd != 1) {
+				dup2(cmd->io_cfg.output_fd, 1);
+				close(cmd->io_cfg.output_fd);
+			}
+
+			if(execv(cmd->name, cmd->argv)) {
+				perror("execv");
+				exit(-1);
+			}
+		} 
+		//TODO deal with the pid
+		//FIXME
+		printf("pid => %d\n", pid);
+	}
 }
 
 static bool IsBuiltIn(char* cmd)
@@ -218,7 +304,7 @@ static void RunBuiltInCmd(commandT* cmd)
 	for(i = 0; i < builtin_cmd_nr; i++) {
 		if(builtin_cmd_list[i].cmd_name && builtin_cmd_list[i].cmd_handler 
 				&& !strcmp(builtin_cmd_list[i].cmd_name, cmd->argv[0])) {
-			builtin_cmd_list[i].cmd_handler(cmd, default_io_config);
+			builtin_cmd_list[i].cmd_handler(cmd);
 			break;
 		}
 	}
