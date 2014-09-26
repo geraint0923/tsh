@@ -53,12 +53,13 @@
 #define VAREXTERN(x, y) extern x;
 #endif
 
+
+#include <unistd.h>
+
 struct io_config {
 	int input_fd;
 	int output_fd;
 };
-
-
 extern struct io_config default_io_config;
 
 typedef struct command_t
@@ -72,6 +73,24 @@ typedef struct command_t
   struct io_config io_cfg;
   char* argv[];
 } commandT;
+
+
+struct working_job {
+	char *cmdline;
+	pid_t pid;
+};
+
+/* to operate the foregound and background jobs list */
+extern void add_fg_job(commandT *cmd);
+
+extern void add_bg_job(commandT *cmd);
+
+extern void remove_fg_job(struct working_job *job);
+
+extern void remove_bg_job(struct working_job *job);
+
+extern struct working_job *find_bg_job_by_pid(pid_t pid);
+
 
 /************Global Variables*********************************************/
 

@@ -33,7 +33,7 @@ CFLAGS = -g -Wall -O2 -D HAVE_CONFIG_H
 
 DELIVERY = Makefile *.h *.c test_type
 PROGS = tsh
-SRCS = interpreter.c io.c runtime.c tsh.c builtin_cmd.c
+SRCS = interpreter.c io.c runtime.c tsh.c builtin_cmd.c list.c
 OBJS = ${SRCS:.c=.o}
 
 TESTING_SRCS = myspin.c mysplit.c mystop.c
