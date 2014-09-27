@@ -9,6 +9,7 @@
 
 #include "builtin_cmd.h"
 #include "runtime.h"
+#include "alias.h"
 
 
 static void cd_handler(commandT *cmd) {	

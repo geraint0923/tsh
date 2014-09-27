@@ -101,15 +101,22 @@ static bool IsBuiltIn(char*);
 
 /**************Implementation***********************************************/
 
+static int fd_table[1024];
+static int fd_count;
+
+
 void init_job_list() {
 	bg_job_list = create_list();
 	assert(bg_job_list);
 }
 
+static pid_t current_group_id;
+
 struct working_job *create_working_job(commandT **cmd, int n) {
 	int i;
 	struct working_job *job = (struct working_job*)malloc(sizeof(struct working_job));
 	assert(job);
+	job->group_id = -1;
 	job->job_id = -1;
 	job->item = NULL;
 	job->proc_seq = (struct working_proc*)malloc(sizeof(struct working_proc)*n);
@@ -119,6 +126,8 @@ struct working_job *create_working_job(commandT **cmd, int n) {
 	for(i = 0; i < n; i++) {
 		job->proc_seq[i].cmdline = strdup(cmd[i]->cmdline);
 		job->proc_seq[i].pid = cmd[i]->pid;
+		if(cmd[i]->pid != -1 && job->group_id == -1)
+			job->group_id = cmd[i]->pid;
 		if(cmd[i]->is_builtin)
 			job->proc_seq[i].done = 1;
 		else
@@ -203,6 +212,7 @@ static int pipeCmd(commandT **cmd, int n) {
 	int i, pp[2], ret = 0;
 	pp[0] = default_io_config.input_fd;
 	pp[1] = default_io_config.output_fd;
+	fd_count = 0;
 	for(i = 0; i < n; i++) {
 		cmd[i]->io_cfg.input_fd = pp[0];
 		cmd[i]->useless_fd[0] = pp[1];
@@ -211,6 +221,8 @@ static int pipeCmd(commandT **cmd, int n) {
 			//FIXME for a piped program, only one fd 
 			//	will be closed after fork
 			ret = pipe(pp);
+			fd_table[fd_count++] = pp[0];
+			fd_table[fd_count++] = pp[1];
 		} else
 			pp[1] = default_io_config.output_fd;
 		cmd[i]->io_cfg.output_fd = pp[1];
@@ -270,6 +282,7 @@ static void waitForCmd() {
 //		printf("proc => 0x%08x\n", proc);
 		if(!proc->done) {
 			waitpid(proc->pid, &stat, 0);
+	//		wait(&stat);
 			printf("reap %d cmd => %s\n", proc->pid, proc->cmdline);
 		}
 	}
@@ -280,6 +293,7 @@ void RunCmd(commandT** cmd, int n)
 {
   int i;
   struct working_job *job;
+  current_group_id = -1;
   total_task = n;
   if(preProcCmd(cmd, n)) {
 	  cleanAll(cmd, n);
@@ -311,6 +325,7 @@ void RunCmd(commandT** cmd, int n)
 	  add_bg_job(job);
 	  printf("[%d] %d\n", job->job_id, job->proc_seq[job->count-1].pid);
   }
+  tcsetpgrp(STDIN_FILENO, getpgrp());
 }
 
 void RunCmdFork(commandT* cmd, bool fork)
@@ -411,45 +426,76 @@ static bool ResolveExternalCmd(commandT* cmd)
   return FALSE; /*The command is not found or the user don't have enough priority to run.*/
 }
 
+void han(int no) {
+//	printf("get signal => %d\n", no);
+}
+
 static void Exec(commandT* cmd, bool forceFork)
 {
 	pid_t pid;
 	int fd, i;
+	char buff[1024];
 	assert(forceFork == TRUE);
 	if(forceFork) {
 		if(!(pid = fork())) {
+			if(current_group_id == -1) {
+				setpgid(0, 0);
+			} else
+				setpgid(0, current_group_id);
+			/*
+			signal(SIGINT,  SIG_IGN);
+			signal(SIGTSTP, SIG_IGN);
+			signal(SIGTTOU, SIG_IGN);
+			signal(SIGTTIN, SIG_IGN);
+			*/
+			if(!cmd->bg) {
+				tcsetpgrp(STDIN_FILENO, getpgrp());
+			}
+
+
 			//TODO deal with pipe and redirect
 			if(cmd->io_cfg.input_fd != 0) {
+			printf("haha=>=>\n");
 				dup2(cmd->io_cfg.input_fd, 0);
-				close(cmd->io_cfg.input_fd);
+			//	close(cmd->io_cfg.input_fd);
 			}
 			if(cmd->io_cfg.output_fd != 1) {
+			printf("haha=>=>\n");
 				dup2(cmd->io_cfg.output_fd, 1);
-				close(cmd->io_cfg.output_fd);
+			//	close(cmd->io_cfg.output_fd);
 			}
 
 			//TODO deal with file redirect
 			if(cmd->is_redirect_in) {
+			printf("haha=>=>\n");
 				fd = open(cmd->redirect_in, O_RDONLY);
 				dup2(fd, 0);
 				close(fd);
 			}
 			if(cmd->is_redirect_out) {
+			printf("haha=>=>\n");
 				fd = open(cmd->redirect_out, O_APPEND | O_CREAT | O_WRONLY,
 						S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
 				dup2(fd, 1);
 				close(fd);
 			}
 
-			for(i = 0; i < 2; i++)
-				if(cmd->useless_fd[i] != 0 && cmd->useless_fd[i] != 1)
-					close(cmd->useless_fd[i]);
+			for(i = 0; i < fd_count; i++)
+				close(fd_table[i]);
 
 			if(execv(cmd->name, cmd->argv)) {
 				perror("execv");
 				exit(-1);
 			}
-		} 
+		} else {
+			if(current_group_id == -1) {
+				current_group_id = pid;
+				setpgid(pid, pid);
+			} else
+				setpgid(pid, current_group_id);
+			tcsetpgrp(STDIN_FILENO, current_group_id);
+			kill(pid, SIGCONT);
+		}
 		//TODO deal with the pid
 		//FIXME
 		cmd->pid = pid;
@@ -507,6 +553,7 @@ commandT* CreateCmdT(int n)
   cd -> is_redirect_in = cd -> is_redirect_out = 0;
   cd -> redirect_in = cd -> redirect_out = NULL;
   cd -> argc = n;
+  cd->pid = -1;
   for(i = 0; i <=n; i++)
     cd -> argv[i] = NULL;
   return cd;

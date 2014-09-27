@@ -41,6 +41,7 @@
 #include "io.h"
 #include "interpreter.h"
 #include "runtime.h"
+#include "sig_handler.h"
 
 /************Defines and Typedefs*****************************************/
 /*  #defines and typedefs should have their names in all caps.
@@ -55,9 +56,13 @@
 
 /************Function Prototypes******************************************/
 /* handles SIGINT and SIGSTOP signals */	
-static void sig(int);
+//static void sig(int);
 
 /************External Declaration*****************************************/
+
+static void test_sig(int no) {
+	printf("what the fuck: %d\n", no);
+}
 
 /**************Implementation***********************************************/
 
@@ -67,8 +72,13 @@ int main (int argc, char *argv[])
   char* cmdLine = (char*)malloc(sizeof(char*)*BUFSIZE);
 
   /* shell initialization */
-  if (signal(SIGINT, sig) == SIG_ERR) PrintPError("SIGINT");
-  if (signal(SIGTSTP, sig) == SIG_ERR) PrintPError("SIGTSTP");
+  if (signal(SIGINT, int_handler) == SIG_ERR) PrintPError("SIGINT");
+  if (signal(SIGTSTP, stp_handler) == SIG_ERR) PrintPError("SIGTSTP");
+  if (signal(SIGTTIN, SIG_IGN) == SIG_ERR) PrintPError("SIGTSTP");
+  if (signal(SIGTTOU, SIG_IGN) == SIG_ERR) PrintPError("SIGTSTP");
+  //if (signal(SIGCHLD, chld_handler) == SIG_ERR) PrintPError("SIGCHLD");
+  //
+  //tcsetpgrp (STDIN_FILENO, getpgrp());
 
   init_job_list();
 
@@ -101,7 +111,8 @@ int main (int argc, char *argv[])
   return 0;
 } /* end main */
 
+/*
 static void sig(int signo)
 {
 }
-
+*/

@@ -63,6 +63,8 @@ struct io_config {
 };
 extern struct io_config default_io_config;
 
+extern struct working_job *current_fg_job;
+
 typedef struct command_t
 {
   char* name;
@@ -80,6 +82,7 @@ typedef struct command_t
 
 struct working_job {
 	int job_id;
+	pid_t group_id;
 	struct working_proc *proc_seq;
 	struct list_item *item;
 	int count;
