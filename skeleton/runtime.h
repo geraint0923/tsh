@@ -83,6 +83,7 @@ struct working_job {
 	struct working_proc *proc_seq;
 	struct list_item *item;
 	int count;
+	int bg;
 };
 
 struct working_proc {
@@ -104,6 +105,8 @@ extern void remove_bg_job(struct working_job *job);
 extern struct working_job *find_bg_job_by_id(int job_id);
 
 extern void release_working_job(struct working_job *job);
+
+extern void traverse_bg_job_list(int (*func)(struct working_job*));
 
 
 /************Global Variables*********************************************/

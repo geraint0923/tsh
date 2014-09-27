@@ -114,6 +114,7 @@ struct working_job *create_working_job(commandT **cmd, int n) {
 	job->item = NULL;
 	job->proc_seq = (struct working_proc*)malloc(sizeof(struct working_proc)*n);
 	job->count = n;
+	job->bg = 0;
 	assert(job->proc_seq);
 	for(i = 0; i < n; i++) {
 		job->proc_seq[i].cmdline = strdup(cmd[i]->cmdline);
@@ -181,6 +182,18 @@ void release_working_job(struct working_job *job) {
 	free(job);
 }
 
+/* stop when func return 0 */
+void traverse_bg_job_list(int (*func)(struct working_job*)) {
+	struct list_item *item;
+	assert(bg_job_list && func);
+	item = bg_job_list->next;
+	while(item) {
+		if(!func((struct working_job*)item->item_val))
+			break;
+		item = item->next;
+	}
+}
+
 /* preprocess to make the pipe done
  * file redirect will be done after fork
  * dup2 pipe -> close old pipe -> file open -> dup2 file
@@ -224,15 +237,19 @@ static void cleanPipe(commandT **cmd, int n) {
 	}
 }
 
-static void genterateJob(commandT **cmd, int n) {
+static struct working_job *generateJob(commandT **cmd, int n) {
 	int i;
 	struct working_job *job;
 	job = create_working_job(cmd, n);
-	for(i = 0; i < n; i++)
-		if(cmd[i]->bg)
-			current_fg_job = NULL;
-		else
-			current_fg_job = job;
+	if(!current_fg_job) {
+		for(i = 0; i < n; i++)
+			if(cmd[i]->bg) {
+				current_fg_job = NULL;
+				job->bg = 1;
+			} else
+				current_fg_job = job;
+	}
+	return job;
 }
 
 static void cleanAll(commandT **cmd, int n) {
@@ -262,6 +279,7 @@ int total_task;
 void RunCmd(commandT** cmd, int n)
 {
   int i;
+  struct working_job *job;
   total_task = n;
   if(preProcCmd(cmd, n)) {
 	  cleanAll(cmd, n);
@@ -280,12 +298,18 @@ void RunCmd(commandT** cmd, int n)
 	  RunCmdFork(cmd[i], TRUE);
 	  //printf("%s => bg = %d\n", cmd[i]->cmdline, cmd[i]->bg);
   }
-  genterateJob(cmd, n);
+  job = generateJob(cmd, n);
   cleanAll(cmd, n);
-  if(current_fg_job)
+  if(current_fg_job/* && current_fg_job == job*/) {
 	  waitForCmd();
-  else {
+	  if(current_fg_job) {
+		  release_working_job(job);
+		  current_fg_job = NULL;
+	  }
+  } else {
 	  //TODO add to bg_job_list
+	  add_bg_job(job);
+	  printf("[%d] %d\n", job->job_id, job->proc_seq[job->count-1].pid);
   }
 }
 

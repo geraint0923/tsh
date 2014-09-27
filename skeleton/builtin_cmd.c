@@ -46,7 +46,27 @@ static void fg_handler(commandT *cmd) {
 static void bg_handler(commandT *cmd) {
 }
 
+static int job_traverse(struct working_job *job) {
+	int i;
+	printf("[%d] ", job->job_id);
+	//TODO print the statue of this job, like running, stopped
+	if(job->bg) 
+		printf("  Running       ");
+	else
+		printf("  Stopped       ");
+	for(i = 0; i < job->count; i++) {
+		printf("%s ", job->proc_seq[i].cmdline);
+		if(i != job->count - 1)
+			printf("| ");
+	}
+	if(job->bg) 
+		printf(" &");
+	printf("\n");
+	return 1;
+}
+
 static void jobs_handler(commandT *cmd) {
+	traverse_bg_job_list(job_traverse);
 }
 
 static void alias_handler(commandT *cmd) {
