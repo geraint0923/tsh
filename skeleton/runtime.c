@@ -277,7 +277,7 @@ static void cleanAll(commandT **cmd, int n) {
 }
 
 static void waitForCmd() {
-	int i, stat = 0, ret, done_count = 0;
+	int i, stat = 0, /*ret,*/ done_count = 0;
 	struct working_proc *proc;
 	assert(current_fg_job);
 //	printf("count ===>>> %d\n", current_fg_job->count);
@@ -295,7 +295,7 @@ static void waitForCmd() {
 	}
 	while(done_count < current_fg_job->count) {
 		//printf("wait for you: %d %d\n", done_count, current_fg_job->count);
-		ret = waitpid(-current_fg_job->group_id, &stat, WUNTRACED);	
+		/*ret =*/(void) waitpid(-current_fg_job->group_id, &stat, WUNTRACED);	
 		if(WIFEXITED(stat)) {
 			done_count++;
 		} else if(WIFSIGNALED(stat)) {
@@ -483,7 +483,6 @@ static void Exec(commandT* cmd, bool forceFork)
 {
 	pid_t pid;
 	int fd, i;
-	char buff[1024];
 	assert(forceFork == TRUE);
 	if(forceFork) {
 		if(!(pid = fork())) {

@@ -60,10 +60,6 @@
 
 /************External Declaration*****************************************/
 
-static void test_sig(int no) {
-	printf("what the fuck: %d\n", no);
-}
-
 /**************Implementation***********************************************/
 
 int main (int argc, char *argv[])
@@ -87,7 +83,7 @@ int main (int argc, char *argv[])
 	  //TODO unblock the signals
 
 	  /* print prompt */
-	  printf("%s@localhost %s $ ", getLogin(), getCurrentWorkingDir());
+	//  printf("%s@localhost %s $ ", getLogin(), getCurrentWorkingDir());
 
     /* read command line */
 	tcsetpgrp(STDIN_FILENO, getpgrp());
