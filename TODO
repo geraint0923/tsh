@@ -2,3 +2,4 @@
 2. Done. multiple file pipe (first pipe then redirect file) 
 3. Done. redirect
 4. running list(foreground and background)
+5. reap background processes

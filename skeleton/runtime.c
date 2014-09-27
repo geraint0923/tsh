@@ -55,6 +55,7 @@
 #include "runtime.h"
 #include "io.h"
 #include "builtin_cmd.h"
+#include "sig_handler.h"
 #include "list.h"
 
 /************Defines and Typedefs*****************************************/
@@ -177,9 +178,29 @@ struct working_job *find_bg_job_by_id(int job_id) {
 			assert(job);
 			if(job->job_id == job_id)
 				return job;
+			item = item->next;
 		}
 	}
 	return NULL;
+}
+
+void set_done_by_pid(pid_t pid) {
+	int i;
+	struct list_item *item = bg_job_list->next;
+	struct working_job *job;
+	if(item != NULL) {
+		while(item) {
+			job = (struct working_job*)item->item_val;
+			assert(job);
+			for(i = 0; i < pid; i++) {
+				if(job->proc_seq[i].pid == pid) {
+					job->proc_seq[i].done = 1;
+					return;
+				}
+			}
+			item = item->next;
+		}
+	}
 }
 
 void release_working_job(struct working_job *job) {
@@ -196,13 +217,14 @@ void release_working_job(struct working_job *job) {
 
 /* stop when func return 0 */
 void traverse_bg_job_list(int (*func)(struct working_job*)) {
-	struct list_item *item;
+	struct list_item *item, *next;
 	assert(bg_job_list && func);
 	item = bg_job_list->next;
 	while(item) {
+		next = item->next;
 		if(!func((struct working_job*)item->item_val))
 			break;
-		item = item->next;
+		item = next;
 	}
 }
 
@@ -278,6 +300,7 @@ static void cleanAll(commandT **cmd, int n) {
 
 static void waitForCmd() {
 	int i, stat = 0, /*ret,*/ done_count = 0;
+	pid_t p;
 	struct working_proc *proc;
 	assert(current_fg_job);
 //	printf("count ===>>> %d\n", current_fg_job->count);
@@ -295,11 +318,15 @@ static void waitForCmd() {
 	}
 	while(done_count < current_fg_job->count) {
 		//printf("wait for you: %d %d\n", done_count, current_fg_job->count);
-		/*ret =*/(void) waitpid(-current_fg_job->group_id, &stat, WUNTRACED);	
-		if(WIFEXITED(stat)) {
+		p = waitpid(-current_fg_job->group_id, &stat, WUNTRACED);	
+		if(WIFEXITED(stat) || WIFSIGNALED(stat)) {
 			done_count++;
-		} else if(WIFSIGNALED(stat)) {
-			done_count++;
+			if(p != -1) {
+				for(i = 0; i < current_fg_job->count; i++) {
+					if(current_fg_job->proc_seq[i].pid == p)
+						current_fg_job->proc_seq[i].done = 1;
+				}
+			}
 		//	printf("killed by signal %d\n", WTERMSIG(stat));
 		} else if(WIFSTOPPED(stat)) {
 //			printf("stopped by signal %d\n", WSTOPSIG(stat));
@@ -475,9 +502,6 @@ static bool ResolveExternalCmd(commandT* cmd)
   return FALSE; /*The command is not found or the user don't have enough priority to run.*/
 }
 
-void han(int no) {
-//	printf("get signal => %d\n", no);
-}
 
 static void Exec(commandT* cmd, bool forceFork)
 {
@@ -527,6 +551,7 @@ static void Exec(commandT* cmd, bool forceFork)
 			for(i = 0; i < fd_count; i++)
 				close(fd_table[i]);
 
+			unblock_signals();
 			if(execv(cmd->name, cmd->argv)) {
 				perror("execv");
 				exit(-1);
@@ -583,8 +608,29 @@ static void RunBuiltInCmd(commandT* cmd)
 	}
 }
 
+static int judge_done_func(struct working_job *job) {
+	int i, done_count = 0;
+	for(i = 0; i < job->count; i++) {
+		if(job->proc_seq[i].done)
+			done_count++;
+	}
+	if(done_count == job->count) {
+		printf("[%d] Done           ", job->job_id);
+		for(i = 0; i < job->count; i++) {
+			printf("%s", job->proc_seq[i].cmdline);
+			if(i != job->count-1)
+				printf(" | ");
+			printf("\n");
+		}
+		remove_bg_job(job);
+		release_working_job(job);
+	}
+	return 1;
+}
+
 void CheckJobs()
 {
+	traverse_bg_job_list(judge_done_func);
 }
 
 

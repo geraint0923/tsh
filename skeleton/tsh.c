@@ -66,6 +66,7 @@ int main (int argc, char *argv[])
 {
   /* Initialize command buffer */
   char* cmdLine = (char*)malloc(sizeof(char*)*BUFSIZE);
+  
 
   /* shell initialization */
   if (signal(SIGINT, int_handler) == SIG_ERR) PrintPError("SIGINT");
@@ -75,19 +76,34 @@ int main (int argc, char *argv[])
   //if (signal(SIGCHLD, chld_handler) == SIG_ERR) PrintPError("SIGCHLD");
   //
   //tcsetpgrp (STDIN_FILENO, getpgrp());
+  
+  init_block_set();
 
   init_job_list();
 
   while (!forceExit) /* repeat forever */
   {
+
+    /* checks the status of background jobs */
+	  // if there is any process recycled by shell
+	  // then print out
+    CheckJobs();
+
 	  //TODO unblock the signals
+	  unblock_signals();
+	  
 
 	  /* print prompt */
-	//  printf("%s@localhost %s $ ", getLogin(), getCurrentWorkingDir());
+	  printf("%s@localhost %s $ ", getLogin(), getCurrentWorkingDir());
 
     /* read command line */
 	tcsetpgrp(STDIN_FILENO, getpgrp());
     getCommandLine(&cmdLine, BUFSIZE);
+
+    //TODO block the signals
+    block_signals();
+
+
 
     if(strcmp(cmdLine, "exit") == 0)
     {
@@ -95,10 +111,7 @@ int main (int argc, char *argv[])
       continue;
     }
 
-    /* checks the status of background jobs */
-    CheckJobs();
 
-    //TODO block the signals
 
     /* interpret command and line
      * includes executing of commands */

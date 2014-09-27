@@ -107,6 +107,8 @@ extern void remove_bg_job(struct working_job *job);
 
 extern struct working_job *find_bg_job_by_id(int job_id);
 
+extern void set_done_by_pid(pid_t pid);
+
 extern void release_working_job(struct working_job *job);
 
 extern void traverse_bg_job_list(int (*func)(struct working_job*));

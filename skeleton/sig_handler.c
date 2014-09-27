@@ -10,6 +10,25 @@
 #include "runtime.h"
 
 
+static sigset_t block_set, old_block_set;
+
+void init_block_set() {
+	sigemptyset(&block_set);
+	sigemptyset(&old_block_set);
+	sigaddset(&block_set, SIGINT);
+	sigaddset(&block_set, SIGTSTP);
+	sigaddset(&block_set, SIGCHLD); 
+}
+
+void block_signals() {
+	sigprocmask(SIG_SETMASK,&block_set,&old_block_set);
+	signal(SIGCHLD, SIG_IGN);
+}
+
+void unblock_signals() {
+	sigprocmask(SIG_SETMASK, &old_block_set, NULL);
+	signal(SIGCHLD, chld_handler);
+}
 
 void int_handler(int no) {
 	/*
@@ -40,6 +59,12 @@ void stp_handler(int no) {
 
 void chld_handler(int no) {
 	int stat;
-	wait(&stat);
-	printf("reap a process\n");
+	pid_t pid;
+//	printf("in chld\n");
+	while((pid = waitpid(-1, &stat, WNOHANG)) > 0) {
+//		printf("000--%d\n", pid);
+		set_done_by_pid(pid);
+	}
+//	printf("out chld\n");
+//	printf("reap a process\n");
 }

@@ -75,7 +75,13 @@ static void bg_handler(commandT *cmd) {
 }
 
 static int job_traverse(struct working_job *job) {
-	int i;
+	int i, done_count = 0;
+	for(i = 0; i < job->count; i++) {
+		if(job->proc_seq[i].done)
+			done_count++;
+	}
+	if(done_count == job->count)
+		return 1;
 	printf("[%d] ", job->job_id);
 	//TODO print the statue of this job, like running, stopped
 	if(job->bg) 
