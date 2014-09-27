@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <signal.h>
 
 #include "builtin_cmd.h"
 #include "runtime.h"
@@ -42,9 +43,35 @@ static void echo_handler(commandT *cmd) {
 }
 
 static void fg_handler(commandT *cmd) {
+	int num;
+	struct working_job *job;
+	assert(cmd->argc > 1);
+	sscanf(cmd->argv[1], "%d", &num);
+	job = find_bg_job_by_id(num);
+	if(!job)
+		return;
+	current_fg_job = job;
+	for(num = 0; num < job->count; num++) {
+		printf("%s", job->proc_seq[num].cmdline);
+		if(num != job->count-1)
+			printf(" | ");
+	}
+	printf("\n");
+	tcsetpgrp(STDIN_FILENO, current_fg_job->group_id);
+	job->bg = 0;
+	kill(-job->group_id, SIGCONT);
 }
 
 static void bg_handler(commandT *cmd) {
+	int num;
+	struct working_job *job;
+	assert(cmd->argc > 1);
+	sscanf(cmd->argv[1], "%d", &num);
+	job = find_bg_job_by_id(num);
+	if(!job)
+		return;
+	job->bg = 1;
+	kill(-job->group_id, SIGCONT);
 }
 
 static int job_traverse(struct working_job *job) {

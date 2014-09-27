@@ -306,22 +306,26 @@ static void waitForCmd() {
 			break;
 		}
 	}
+	/*
 	if(WIFSTOPPED(stat))  {
 		printf("stopped by signal %d\n", WSTOPSIG(stat));	
 	}
+	*/
 	if(done_count == current_fg_job->count) {
 		remove_bg_job(current_fg_job);
 		release_working_job(current_fg_job);
 	} else {
-		if(current_fg_job->job_id != -1) {
+		if(current_fg_job->job_id == -1) {
 			add_bg_job(current_fg_job);
 			printf("[%d]  Stopped      ", current_fg_job->job_id);
-			for(i = 0; i < current_fg_job->count; i++) {
-				printf("%s ", current_fg_job->proc_seq[i].cmdline);
-				if(i != current_fg_job->count-1)
-					printf("| ");
-			}
+			
 		}
+		for(i = 0; i < current_fg_job->count; i++) {
+			printf("%s ", current_fg_job->proc_seq[i].cmdline);
+			if(i != current_fg_job->count-1)
+				printf("| ");
+		}
+		printf("\n");
 	}
 }
 
