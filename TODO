@@ -1,4 +1,4 @@
 1. substitute ~ in path(consider " and ')
-2. done. multiple file pipe (first pipe then redirect file) 
-3. done. redirect
+2. Done. multiple file pipe (first pipe then redirect file) 
+3. Done. redirect
 4. running list(foreground and background)
