@@ -84,11 +84,13 @@ int main (int argc, char *argv[])
 
   while (!forceExit) /* repeat forever */
   {
+	  //TODO unblock the signals
 
 	  /* print prompt */
 	  printf("%s@localhost %s $ ", getLogin(), getCurrentWorkingDir());
 
     /* read command line */
+	tcsetpgrp(STDIN_FILENO, getpgrp());
     getCommandLine(&cmdLine, BUFSIZE);
 
     if(strcmp(cmdLine, "exit") == 0)
@@ -99,6 +101,8 @@ int main (int argc, char *argv[])
 
     /* checks the status of background jobs */
     CheckJobs();
+
+    //TODO block the signals
 
     /* interpret command and line
      * includes executing of commands */

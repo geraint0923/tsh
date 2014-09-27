@@ -152,9 +152,12 @@ void add_bg_job(struct working_job *job) {
 		job->job_id = ((struct working_job*)prev->item_val)->job_id + 1;
 }
 
-void remvoe_bg_job(struct working_job *job) {
+void remove_bg_job(struct working_job *job) {
 	struct list_item *item;
-	assert(bg_job_list && job->item);
+	assert(bg_job_list);
+	//assert(job->item);
+	if(!job->item)
+		return;
 	item = bg_job_list;
 	while(item->next && item->next != job->item)
 		item = item->next;
@@ -258,8 +261,10 @@ static struct working_job *generateJob(commandT **cmd, int n) {
 			if(cmd[i]->bg) {
 				current_fg_job = NULL;
 				job->bg = 1;
-			} else
+			} else {
 				current_fg_job = job;
+				//printf("set current fg\n");
+			}
 	}
 	return job;
 }
@@ -272,18 +277,50 @@ static void cleanAll(commandT **cmd, int n) {
 }
 
 static void waitForCmd() {
-	int i, stat;
+	int i, stat = 0, ret, done_count = 0;
 	struct working_proc *proc;
 	assert(current_fg_job);
-	printf("count ===>>> %d\n", current_fg_job->count);
+//	printf("count ===>>> %d\n", current_fg_job->count);
 	for(i = 0; i < current_fg_job->count; i++) {
 		proc = &(current_fg_job->proc_seq[i]);
 		assert(proc);
 //		printf("proc => 0x%08x\n", proc);
-		if(!proc->done) {
-			waitpid(proc->pid, &stat, 0);
+		if(proc->done) {
+			done_count++;
+			//waitpid(proc->pid, &stat, 0);
+			//ret = waitpid(, &status, WUNTRACED | WCONTINUED);
 	//		wait(&stat);
-			printf("reap %d cmd => %s\n", proc->pid, proc->cmdline);
+			//printf("reap %d cmd => %s\n", proc->pid, proc->cmdline);
+		}
+	}
+	while(done_count < current_fg_job->count) {
+		//printf("wait for you: %d %d\n", done_count, current_fg_job->count);
+		ret = waitpid(-current_fg_job->group_id, &stat, WUNTRACED);	
+		if(WIFEXITED(stat)) {
+			done_count++;
+		} else if(WIFSIGNALED(stat)) {
+			done_count++;
+		//	printf("killed by signal %d\n", WTERMSIG(stat));
+		} else if(WIFSTOPPED(stat)) {
+//			printf("stopped by signal %d\n", WSTOPSIG(stat));
+			break;
+		}
+	}
+	if(WIFSTOPPED(stat))  {
+		printf("stopped by signal %d\n", WSTOPSIG(stat));	
+	}
+	if(done_count == current_fg_job->count) {
+		remove_bg_job(current_fg_job);
+		release_working_job(current_fg_job);
+	} else {
+		if(current_fg_job->job_id != -1) {
+			add_bg_job(current_fg_job);
+			printf("[%d]  Stopped      ", current_fg_job->job_id);
+			for(i = 0; i < current_fg_job->count; i++) {
+				printf("%s ", current_fg_job->proc_seq[i].cmdline);
+				if(i != current_fg_job->count-1)
+					printf("| ");
+			}
 		}
 	}
 }
@@ -310,22 +347,30 @@ void RunCmd(commandT** cmd, int n)
   */
   for(i = 0; i < n; i++) {
 	  RunCmdFork(cmd[i], TRUE);
+	  if(current_fg_job)
+		  break;
 	  //printf("%s => bg = %d\n", cmd[i]->cmdline, cmd[i]->bg);
   }
   job = generateJob(cmd, n);
+
+  if(job != current_fg_job)
+	  release_working_job(job);
   cleanAll(cmd, n);
   if(current_fg_job/* && current_fg_job == job*/) {
 	  waitForCmd();
+	  /*
 	  if(current_fg_job) {
 		  release_working_job(job);
 		  current_fg_job = NULL;
 	  }
+	  */
   } else {
 	  //TODO add to bg_job_list
 	  add_bg_job(job);
 	  printf("[%d] %d\n", job->job_id, job->proc_seq[job->count-1].pid);
   }
-  tcsetpgrp(STDIN_FILENO, getpgrp());
+  current_fg_job = NULL;
+  //tcsetpgrp(STDIN_FILENO, getpgrp());
 }
 
 void RunCmdFork(commandT* cmd, bool fork)
@@ -455,25 +500,21 @@ static void Exec(commandT* cmd, bool forceFork)
 
 			//TODO deal with pipe and redirect
 			if(cmd->io_cfg.input_fd != 0) {
-			printf("haha=>=>\n");
 				dup2(cmd->io_cfg.input_fd, 0);
 			//	close(cmd->io_cfg.input_fd);
 			}
 			if(cmd->io_cfg.output_fd != 1) {
-			printf("haha=>=>\n");
 				dup2(cmd->io_cfg.output_fd, 1);
 			//	close(cmd->io_cfg.output_fd);
 			}
 
 			//TODO deal with file redirect
 			if(cmd->is_redirect_in) {
-			printf("haha=>=>\n");
 				fd = open(cmd->redirect_in, O_RDONLY);
 				dup2(fd, 0);
 				close(fd);
 			}
 			if(cmd->is_redirect_out) {
-			printf("haha=>=>\n");
 				fd = open(cmd->redirect_out, O_APPEND | O_CREAT | O_WRONLY,
 						S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
 				dup2(fd, 1);
@@ -499,7 +540,7 @@ static void Exec(commandT* cmd, bool forceFork)
 		//TODO deal with the pid
 		//FIXME
 		cmd->pid = pid;
-		printf("pid => %d\n", pid);
+//		printf("pid => %d\n", pid);
 	}
 }
 

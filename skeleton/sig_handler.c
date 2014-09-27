@@ -12,6 +12,7 @@
 
 
 void int_handler(int no) {
+	/*
 	int i;
 	if(current_fg_job) {
 		for(i = 0; i < current_fg_job->count; i++) {
@@ -21,6 +22,7 @@ void int_handler(int no) {
 			}
 		}
 	}
+	*/
 }
 
 
