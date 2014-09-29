@@ -194,7 +194,7 @@ void set_done_by_pid(pid_t pid) {
 		while(item) {
 			job = (struct working_job*)item->item_val;
 			assert(job);
-			for(i = 0; i < pid; i++) {
+			for(i = 0; i < job->count; i++) {
 				if(job->proc_seq[i].pid == pid) {
 					job->proc_seq[i].done = 1;
 					return;
