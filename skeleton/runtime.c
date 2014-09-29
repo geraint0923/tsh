@@ -155,7 +155,7 @@ void add_bg_job(struct working_job *job) {
 }
 
 void remove_bg_job(struct working_job *job) {
-	struct list_item *item;
+	struct list_item *item, *next;
 	assert(bg_job_list);
 	//assert(job->item);
 	if(!job->item)
@@ -165,8 +165,9 @@ void remove_bg_job(struct working_job *job) {
 		item = item->next;
 	if(item->next == job->item) {
 		job->item = NULL;
-		item->next = item->next->next;
+		next = item->next->next;
 		release_list_item(item->next);
+		item->next = next;
 	}
 }
 
@@ -388,7 +389,7 @@ void expandAlias(commandT **cmd) {
 			strcat(ct->cmdline, item->expand_argv[i]);
 		}
 		strcat(ct->cmdline, strlen(item->key)+(*cmd)->cmdline);
-		printf("whole_line: %s\n", ct->cmdline);
+//		printf("whole_line: %s\n", ct->cmdline);
 		//free((*cmd)->cmdline);
 
 		ct->redirect_in = (*cmd)->redirect_in;
