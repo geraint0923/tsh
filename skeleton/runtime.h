@@ -74,7 +74,6 @@ typedef struct command_t
   int bg;
   int argc;
   struct io_config io_cfg;
-  int useless_fd[2];
   pid_t pid;
   int is_builtin; // command not found -> builtin
   char* argv[];
@@ -112,6 +111,8 @@ extern void set_done_by_pid(pid_t pid);
 extern void release_working_job(struct working_job *job);
 
 extern void traverse_bg_job_list(int (*func)(struct working_job*));
+
+extern void destroy_job_list();
 
 
 /************Global Variables*********************************************/

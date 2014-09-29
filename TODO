@@ -2,4 +2,6 @@
 2. Done. multiple file pipe (first pipe then redirect file) 
 3. Done. redirect
 4. running list(foreground and background)
-5. reap background processes
+5. Done. reap background processes
+6. destroy alias list and job list(not implemented yet)
+7. make fg, bg work fine when no argument is provided

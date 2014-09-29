@@ -42,6 +42,7 @@
 #include "interpreter.h"
 #include "runtime.h"
 #include "sig_handler.h"
+#include "alias.h"
 
 /************Defines and Typedefs*****************************************/
 /*  #defines and typedefs should have their names in all caps.
@@ -80,6 +81,7 @@ int main (int argc, char *argv[])
   init_block_set();
 
   init_job_list();
+  init_alias_list();
 
   while (!forceExit) /* repeat forever */
   {
@@ -118,6 +120,8 @@ int main (int argc, char *argv[])
     Interpret(cmdLine);
 
   }
+  destroy_job_list();
+  destroy_alias_list();
 
   /* shell termination */
   free(cmdLine);

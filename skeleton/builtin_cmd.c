@@ -103,10 +103,50 @@ static void jobs_handler(commandT *cmd) {
 	traverse_bg_job_list(job_traverse);
 }
 
+static int alias_traverse_func(struct alias_item *item) {
+	printf("%s=%s\n", item->key, item->val);
+	return 1;
+}
+
 static void alias_handler(commandT *cmd) {
+	int i, start = 0;
+	struct alias_item *item;
+	if(cmd->argc == 1) {
+		traverse_alias_list(alias_traverse_func);
+		return;
+	}
+	/*
+	printf("cmdline: %s\n", cmd->cmdline);
+	for(i = 0; i < cmd->argc; i++) {
+		printf("argv[%d]: %s\n", i, cmd->argv[i]);
+	}
+	*/
+	for(i = 5; i < strlen(cmd->cmdline); i++) {
+		if(cmd->cmdline[i] != ' ') {
+			start = i;
+			break;
+		}
+	}
+	item = parse_alias(cmd->cmdline + start);
+	if(item) {
+		/*
+		for(i = 0; i < item->argc; i++) {
+			printf("expand argv %d => %s\n", i, item->expand_argv[i]);
+		}
+		*/
+		insert_alias_item(item);
+	}
 }
 
 static void unalias_handler(commandT *cmd) {
+	struct alias_item *item;
+	if(cmd->argc > 1) {
+		item = find_alias(cmd->argv[1]);
+		if(item) {
+			remove_alias_item(item);
+			release_alias_item(item);
+		}
+	}
 }
 
 

@@ -57,6 +57,7 @@
 #include "builtin_cmd.h"
 #include "sig_handler.h"
 #include "list.h"
+#include "alias.h"
 
 /************Defines and Typedefs*****************************************/
 /*  #defines and typedefs should have their names in all caps.
@@ -228,6 +229,9 @@ void traverse_bg_job_list(int (*func)(struct working_job*)) {
 	}
 }
 
+void destroy_job_list() {
+}
+
 /* preprocess to make the pipe done
  * file redirect will be done after fork
  * dup2 pipe -> close old pipe -> file open -> dup2 file
@@ -240,7 +244,7 @@ static int pipeCmd(commandT **cmd, int n) {
 	fd_count = 0;
 	for(i = 0; i < n; i++) {
 		cmd[i]->io_cfg.input_fd = pp[0];
-		cmd[i]->useless_fd[0] = pp[1];
+//		cmd[i]->useless_fd[0] = pp[1];
 		if(i != n-1) {
 			//TODO genterate a pair of pipe
 			//FIXME for a piped program, only one fd 
@@ -251,7 +255,7 @@ static int pipeCmd(commandT **cmd, int n) {
 		} else
 			pp[1] = default_io_config.output_fd;
 		cmd[i]->io_cfg.output_fd = pp[1];
-		cmd[i]->useless_fd[1] = pp[0];
+//		cmd[i]->useless_fd[1] = pp[0];
 	}
 	if(ret)
 		perror("pipe");
@@ -356,6 +360,51 @@ static void waitForCmd() {
 	}
 }
 
+void expandAlias(commandT **cmd) {
+	struct alias_item *item;
+	int i, len;
+	commandT *ct;
+	item = find_alias((*cmd)->argv[0]);
+	if(item) {
+	//	printf("find alias ==>> %s\n", item->val);	
+		ct = CreateCmdT(item->argc - 1 + (*cmd)->argc);
+		// expand cmdline
+		len = strlen(item->val)+strlen((*cmd)->cmdline)+1;	
+		ct->cmdline = (char*)malloc(sizeof(char)*len);
+		memset(ct->cmdline, 0, len);
+		for(i = 0; i < item->argc; i++) {
+			strcat(ct->cmdline, item->expand_argv[i]);
+		}
+		strcat(ct->cmdline, strlen(item->key)+1+(*cmd)->cmdline);
+		//free((*cmd)->cmdline);
+
+		ct->redirect_in = (*cmd)->redirect_in;
+		ct->redirect_out = (*cmd)->redirect_out;
+		ct->is_redirect_in = (*cmd)->is_redirect_in;
+		ct->is_redirect_out = (*cmd)->is_redirect_out;
+		ct->bg = (*cmd)->bg;
+		ct->argc = item->argc - 1 + (*cmd)->argc;
+		ct->io_cfg = (*cmd)->io_cfg;
+		for(i = 0; i < item->argc; i++) {
+			ct->argv[i] = strdup(item->expand_argv[i]);
+		//	printf("ct->argv[%d] = %s\n", i, ct->argv[i]);
+		}
+		for(i = 1; i < (*cmd)->argc; i++) {
+			ct->argv[item->argc + i - 1] = strdup((*cmd)->argv[i]);
+		//	printf("ct->argv[%d] = %s\n", item->argc+i-1, ct->argv[item->argc+i-1]);
+		}
+		ReleaseCmdT(cmd);
+		*cmd = ct;
+	}
+}
+
+void checkAlias(commandT **cmd, int n) {
+	int i;
+	for(i = 0; i < n; i++) {
+		expandAlias(cmd + i);	
+	}
+}
+
 int total_task;
 void RunCmd(commandT** cmd, int n)
 {
@@ -363,6 +412,12 @@ void RunCmd(commandT** cmd, int n)
   struct working_job *job;
   current_group_id = -1;
   total_task = n;
+  checkAlias(cmd, n);
+  /*
+  for(i = 0; i < n; i++) {
+	  printf("[%d] cmd => %s\n", i, cmd[i]->cmdline);
+  }
+  */
   if(preProcCmd(cmd, n)) {
 	  cleanAll(cmd, n);
 	  return;
@@ -508,6 +563,11 @@ static void Exec(commandT* cmd, bool forceFork)
 	pid_t pid;
 	int fd, i;
 	assert(forceFork == TRUE);
+	/*
+	for(i = 0; i < cmd->argc; i++) {
+		printf("ee => %d == %ss\n", i, cmd->argv[i]);
+	}
+	*/
 	if(forceFork) {
 		if(!(pid = fork())) {
 			if(current_group_id == -1) {
