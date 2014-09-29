@@ -230,6 +230,16 @@ void traverse_bg_job_list(int (*func)(struct working_job*)) {
 }
 
 void destroy_job_list() {
+	struct list_item *item, *next;
+	assert(bg_job_list);
+	item = bg_job_list->next;
+	while(item) {
+		next = item->next;
+		release_working_job((struct working_job*)item->item_val);
+		free(item);
+		item = next;
+	}
+	free(bg_job_list);
 }
 
 /* preprocess to make the pipe done
@@ -369,13 +379,16 @@ void expandAlias(commandT **cmd) {
 	//	printf("find alias ==>> %s\n", item->val);	
 		ct = CreateCmdT(item->argc - 1 + (*cmd)->argc);
 		// expand cmdline
-		len = strlen(item->val)+strlen((*cmd)->cmdline)+1;	
+		len = strlen(item->val)+strlen((*cmd)->cmdline)+3;	
 		ct->cmdline = (char*)malloc(sizeof(char)*len);
 		memset(ct->cmdline, 0, len);
-		for(i = 0; i < item->argc; i++) {
+		strcat(ct->cmdline, item->expand_argv[0]);
+		for(i = 1; i < item->argc; i++) {
+			strcat(ct->cmdline, " ");
 			strcat(ct->cmdline, item->expand_argv[i]);
 		}
-		strcat(ct->cmdline, strlen(item->key)+1+(*cmd)->cmdline);
+		strcat(ct->cmdline, strlen(item->key)+(*cmd)->cmdline);
+		printf("whole_line: %s\n", ct->cmdline);
 		//free((*cmd)->cmdline);
 
 		ct->redirect_in = (*cmd)->redirect_in;

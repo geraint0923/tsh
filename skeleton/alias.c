@@ -154,7 +154,7 @@ void release_alias_item(struct alias_item *item) {
 				free(item->expand_argv[i]);
 		free(item->expand_argv);
 	}
-
+	free(item);
 }
 
 void traverse_alias_list(int (*func)(struct alias_item*)) {
