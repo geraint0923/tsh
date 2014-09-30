@@ -89,12 +89,16 @@ static int job_traverse(struct working_job *job) {
 		if(job->proc_seq[i].done)
 			done_count++;
 	}
+	/*
 	if(done_count == job->count)
 		return 1;
+		*/
 	sprintf(buff, "[%d] ", job->job_id);
 	printStr(buff);
 	//TODO print the statue of this job, like running, stopped
-	if(job->bg)  {
+	if(done_count == job->count) {
+		sprintf(buff, "  Done                    ");
+	} else if(job->bg)  {
 		sprintf(buff, "  Running                 ");
 	} else {
 		sprintf(buff, "  Stopped                 ");
@@ -106,8 +110,12 @@ static int job_traverse(struct working_job *job) {
 		if(i != job->count - 1)
 			printStr(" | ");
 	}
-	if(job->bg) 
+	if(job->bg && done_count < job->count) 
 		printStr(" &");
+	if(done_count == job->count) {
+		remove_bg_job(job);
+		release_working_job(job);
+	}
 	printStr("\n");
 	return 1;
 }
