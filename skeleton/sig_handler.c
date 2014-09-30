@@ -15,8 +15,8 @@ static sigset_t block_set, old_block_set;
 void init_block_set() {
 	sigemptyset(&block_set);
 	sigemptyset(&old_block_set);
-	sigaddset(&block_set, SIGINT);
-	sigaddset(&block_set, SIGTSTP);
+//	sigaddset(&block_set, SIGINT);
+//	sigaddset(&block_set, SIGTSTP);
 	sigaddset(&block_set, SIGCHLD); 
 }
 

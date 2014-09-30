@@ -13,6 +13,12 @@
 #include "alias.h"
 
 
+static void printStr(const char *str) {
+	int ret = write(STDOUT_FILENO, str, strlen(str));
+	if(ret < 0)
+		perror("write");
+}
+
 static void cd_handler(commandT *cmd) {	
 	//printf("change dir: %s\n", cmd->cmdline);
 	// TODO substitute the ~ character
@@ -52,11 +58,11 @@ static void fg_handler(commandT *cmd) {
 		return;
 	current_fg_job = job;
 	for(num = 0; num < job->count; num++) {
-		fprintf(stdout, "%s", job->proc_seq[num].cmdline);
+		printStr(job->proc_seq[num].cmdline);
 		if(num != job->count-1)
-			fprintf(stdout, " | ");
+			printStr(" | ");
 	}
-	fprintf(stdout, "\n");
+	printStr("\n");
 	tcsetpgrp(STDIN_FILENO, current_fg_job->group_id);
 	job->bg = 0;
 	kill(-job->group_id, SIGCONT);
@@ -76,26 +82,31 @@ static void bg_handler(commandT *cmd) {
 
 static int job_traverse(struct working_job *job) {
 	int i, done_count = 0;
+	char buff[256];
 	for(i = 0; i < job->count; i++) {
 		if(job->proc_seq[i].done)
 			done_count++;
 	}
 	if(done_count == job->count)
 		return 1;
-	printf("[%d] ", job->job_id);
+	sprintf(buff, "[%d] ", job->job_id);
+	printStr(buff);
 	//TODO print the statue of this job, like running, stopped
-	if(job->bg) 
-		printf("  Running                 ");
-	else
-		printf("  Stopped                 ");
+	if(job->bg)  {
+		sprintf(buff, "  Running                 ");
+	} else {
+		sprintf(buff, "  Stopped                 ");
+	}
+	printStr(buff);
 	for(i = 0; i < job->count; i++) {
-		printf("%s", job->proc_seq[i].cmdline);
+		sprintf(buff, "%s", job->proc_seq[i].cmdline);
+		printStr(buff);
 		if(i != job->count - 1)
-			printf(" | ");
+			printStr(" | ");
 	}
 	if(job->bg) 
-		printf(" &");
-	printf("\n");
+		printStr("&");
+	printStr("\n");
 	return 1;
 }
 
@@ -104,7 +115,12 @@ static void jobs_handler(commandT *cmd) {
 }
 
 static int alias_traverse_func(struct alias_item *item) {
-	printf("alias %s=%s\n", item->key, item->val);
+	char *buff = (char*)malloc(sizeof(char)*(strlen(item->key) + strlen(item->val) + 20));
+	if(buff) {
+		sprintf(buff, "alias %s=%s\n", item->key, item->val);
+		printStr(buff);
+		free(buff);
+	}
 	return 1;
 }
 

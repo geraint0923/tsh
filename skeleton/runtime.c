@@ -107,6 +107,12 @@ static int fd_table[1024];
 static int fd_count;
 
 
+static void printStr(const char *str) {
+	int ret = write(STDOUT_FILENO, str, strlen(str));
+	if(ret < 0)
+		perror("write");
+}
+
 void init_job_list() {
 	bg_job_list = create_list();
 	assert(bg_job_list);
@@ -315,6 +321,7 @@ static void cleanAll(commandT **cmd, int n) {
 
 static void waitForCmd() {
 	int i, stat = 0, /*ret,*/ done_count = 0;
+	char buff[1024];
 	pid_t p;
 	struct working_proc *proc;
 	assert(current_fg_job);
@@ -369,15 +376,16 @@ static void waitForCmd() {
 	} else {
 		if(current_fg_job->job_id == -1) {
 			add_bg_job(current_fg_job);
-			fprintf(stdout, "[%d]  Stopped      ", current_fg_job->job_id);
-			
+			sprintf(buff, "[%d]  Stopped      ", current_fg_job->job_id);
+			printStr(buff);
 		}
 		for(i = 0; i < current_fg_job->count; i++) {
-			fprintf(stdout, "%s ", current_fg_job->proc_seq[i].cmdline);
+			sprintf(buff, "%s ", current_fg_job->proc_seq[i].cmdline);
+			printStr(buff);
 			if(i != current_fg_job->count-1)
-				fprintf(stdout, "| ");
+				printStr("| ");
 		}
-		fprintf(stdout, "\n");
+		printStr("\n");
 	}
 }
 
@@ -522,12 +530,14 @@ void RunCmdRedirIn(commandT* cmd, char* file)
 /*Try to run an external command*/
 static void RunExternalCmd(commandT* cmd, bool fork)
 {
+	char buff[256];
   if (ResolveExternalCmd(cmd)){
     Exec(cmd, fork);
     //TODO add to running list
   }
   else {
-    printf("%s: command not found\n", cmd->argv[0]);
+    sprintf(buff, "%s: command not found\n", cmd->argv[0]);
+    printStr(buff);
     cmd->is_builtin = 1;
     cmd->pid = -1;
     fflush(stdout);
@@ -695,6 +705,7 @@ static void RunBuiltInCmd(commandT* cmd)
 
 static int judge_done_func(struct working_job *job) {
 	int i, done_count = 0;
+	char buff[256];
 	for(i = 0; i < job->count; i++) {
 		if(job->proc_seq[i].done)
 			done_count++;
@@ -702,12 +713,13 @@ static int judge_done_func(struct working_job *job) {
 		//printf("job %d => %d %d\n", job->job_id, done_count, job->count);
 	if(done_count == job->count) {
 		//printf("job %d done\n", job->job_id);
-		fprintf(stdout, "[%d]   Done                    ", job->job_id);
+		sprintf(buff, "[%d]   Done                    ", job->job_id);
+		printStr(buff);
 		for(i = 0; i < job->count; i++) {
-			fprintf(stdout, "%s", job->proc_seq[i].cmdline);
+			printStr(job->proc_seq[i].cmdline);
 			if(i != job->count-1)
-				printf(" | ");
-			fprintf(stdout, "\n");
+				printStr(" | ");
+			printStr("\n");
 		}
 		remove_bg_job(job);
 		release_working_job(job);
