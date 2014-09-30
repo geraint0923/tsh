@@ -57,12 +57,14 @@ static void fg_handler(commandT *cmd) {
 	if(!job)
 		return;
 	current_fg_job = job;
+	/*
 	for(num = 0; num < job->count; num++) {
 		printStr(job->proc_seq[num].cmdline);
 		if(num != job->count-1)
 			printStr(" | ");
 	}
 	printStr("\n");
+	*/
 	tcsetpgrp(STDIN_FILENO, current_fg_job->group_id);
 	job->bg = 0;
 	kill(-job->group_id, SIGCONT);
@@ -105,7 +107,7 @@ static int job_traverse(struct working_job *job) {
 			printStr(" | ");
 	}
 	if(job->bg) 
-		printStr("&");
+		printStr(" &");
 	printStr("\n");
 	return 1;
 }

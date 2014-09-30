@@ -120,6 +120,17 @@ void init_job_list() {
 
 static pid_t current_group_id;
 
+void stripSpace(char *line) {
+	int i, len;
+	assert(line);
+	len = strlen(line);
+	for(i = len - 1; i >= 0; i++) {
+		if(line[i] != ' ')
+			break;
+		line[i] = 0;
+	}
+}
+
 struct working_job *create_working_job(commandT **cmd, int n) {
 	int i;
 	struct working_job *job = (struct working_job*)malloc(sizeof(struct working_job));
@@ -132,6 +143,7 @@ struct working_job *create_working_job(commandT **cmd, int n) {
 	job->bg = 0;
 	assert(job->proc_seq);
 	for(i = 0; i < n; i++) {
+		stripSpace(cmd[i]->cmdline);
 		job->proc_seq[i].cmdline = strdup(cmd[i]->cmdline);
 		job->proc_seq[i].pid = cmd[i]->pid;
 		if(cmd[i]->pid != -1 && job->group_id == -1)
@@ -351,8 +363,8 @@ static void waitForCmd() {
 			}
 			if(i < current_fg_job->count) {
 				// reaped process in current working job
-				done_count++;
 				if(WIFEXITED(stat) || WIFSIGNALED(stat)) {
+					done_count++;
 					current_fg_job->proc_seq[i].done = 1;
 				} else if(WIFSTOPPED(stat)) {
 					break;
@@ -366,7 +378,8 @@ static void waitForCmd() {
 	}
 	/*
 	if(WIFSTOPPED(stat))  {
-		printf("stopped by signal %d\n", WSTOPSIG(stat));	
+		//printf("stopped by signal %d\n", WSTOPSIG(stat));	
+		add_bg_job(current_fg_job);
 	}
 	*/
 	//printf("after done => %d %d\n", done_count, current_fg_job->count);
@@ -376,14 +389,15 @@ static void waitForCmd() {
 	} else {
 		if(current_fg_job->job_id == -1) {
 			add_bg_job(current_fg_job);
-			sprintf(buff, "[%d]  Stopped      ", current_fg_job->job_id);
+			printStr("\n");
+			sprintf(buff, "[%d]   Stopped                 ", current_fg_job->job_id);
 			printStr(buff);
 		}
 		for(i = 0; i < current_fg_job->count; i++) {
-			sprintf(buff, "%s ", current_fg_job->proc_seq[i].cmdline);
+			sprintf(buff, "%s", current_fg_job->proc_seq[i].cmdline);
 			printStr(buff);
 			if(i != current_fg_job->count-1)
-				printStr("| ");
+				printStr(" | ");
 		}
 		printStr("\n");
 	}

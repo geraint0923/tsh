@@ -50,7 +50,8 @@ void int_handler(int no) {
 
 void stp_handler(int no) {
 	if(current_fg_job && current_fg_job->group_id > 0) {
-		kill(-current_fg_job->group_id, SIGTSTP);
+		if(kill(-current_fg_job->group_id, SIGTSTP))
+			perror("kill");
 	}
 	/*
 	int i;
@@ -70,7 +71,7 @@ void chld_handler(int no) {
 		//printf("000--%d\n", pid);
 		set_done_by_pid(pid);
 	}
-	CheckJobs();
+//	CheckJobs();
 //	printf("out chld\n");
 //	printf("reap a process\n");
 }
