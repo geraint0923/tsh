@@ -28,7 +28,7 @@ static void cd_handler(commandT *cmd) {
 		ret = chdir(cmd->argv[1]);
 	} else {
 		pw = getpwuid(getuid());
-		chdir(pw->pw_dir);
+		ret = chdir(pw->pw_dir);
 	}
 	if(ret)
 		perror("cd");
