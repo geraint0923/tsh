@@ -41,6 +41,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <pwd.h>
 #include <string.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
@@ -403,24 +404,64 @@ static void waitForCmd() {
 	}
 }
 
-void expandAlias(commandT **cmd) {
+/* 
+ * substitute the symbol '~' as home directory
+ * */
+void subTelda(char **str) {
+	struct passwd *pw;
+	char *buff;
+	int len;
+	assert(str && *str);
+	if((*str)[0] == '~' && ((*str)[1] == 0 || (*str)[1] == '/')) {
+		pw = getpwuid(getuid());
+		len = strlen(pw->pw_dir) + strlen(*str);
+		buff = (char*)malloc(len);
+		if(buff) {
+			memset(buff, 0, len);
+			strcpy(buff, pw->pw_dir);
+			strcat(buff, (*str)+1);
+			free(*str);
+			printf("free -> 0x%08x\n", *str);
+			*str = buff;
+		}
+	}
+}
+
+int expandAlias(commandT **cmd, int arg_idx) {
 	struct alias_item *item;
-	int i, len;
+	int i, len, j, ret = 0;
 	commandT *ct;
-	item = find_alias((*cmd)->argv[0]);
+	item = find_alias((*cmd)->argv[arg_idx]);
 	if(item) {
 	//	printf("find alias ==>> %s\n", item->val);	
 		ct = CreateCmdT(item->argc - 1 + (*cmd)->argc);
+		ret = item->argc - 1;
 		// expand cmdline
-		len = strlen(item->val)+strlen((*cmd)->cmdline)+3;	
+		//len = strlen(item->val)+strlen((*cmd)->cmdline)+3;	
+		len = 0;
+		for(i = 0; i < (*cmd)->argc; i++) {
+			if(i != arg_idx)
+				len += strlen((*cmd)->argv[i]) + 1;
+		}
+		for(i = 0; i < item->argc; i++) {
+			len += strlen(item->expand_argv[i]) + 1;
+		}
 		ct->cmdline = (char*)malloc(sizeof(char)*len);
 		memset(ct->cmdline, 0, len);
-		strcat(ct->cmdline, item->expand_argv[0]);
-		for(i = 1; i < item->argc; i++) {
-			strcat(ct->cmdline, " ");
-			strcat(ct->cmdline, item->expand_argv[i]);
+		for(i = 0; i < (*cmd)->argc; i++) {
+			if(i == arg_idx) {
+				for(j = 0; j < item->argc; j++) {
+					strcat(ct->cmdline, item->expand_argv[j]);
+					if(!(i == (*cmd)->argc -1 && j == item->argc - 1))
+						strcat(ct->cmdline, " ");
+				}
+			} else {
+				strcat(ct->cmdline, (*cmd)->argv[i]);
+				if(i != (*cmd)->argc - 1)
+					strcat(ct->cmdline, " ");
+			}
 		}
-		strcat(ct->cmdline, strlen(item->key)+(*cmd)->cmdline);
+//		strcat(ct->cmdline, strlen(item->key)+(*cmd)->cmdline);
 //		printf("whole_line: %s\n", ct->cmdline);
 		//free((*cmd)->cmdline);
 
@@ -431,23 +472,41 @@ void expandAlias(commandT **cmd) {
 		ct->bg = (*cmd)->bg;
 		ct->argc = item->argc - 1 + (*cmd)->argc;
 		ct->io_cfg = (*cmd)->io_cfg;
+		/*
 		for(i = 0; i < item->argc; i++) {
 			ct->argv[i] = strdup(item->expand_argv[i]);
-		//	printf("ct->argv[%d] = %s\n", i, ct->argv[i]);
+			printf("ct->argv[%d] = %s 0x%08x\n", i, ct->argv[i], ct->argv[i]);
 		}
-		for(i = 1; i < (*cmd)->argc; i++) {
+		for(i = 0; i < (*cmd)->argc; i++) {
 			ct->argv[item->argc + i - 1] = strdup((*cmd)->argv[i]);
 		//	printf("ct->argv[%d] = %s\n", item->argc+i-1, ct->argv[item->argc+i-1]);
+		}
+		*/
+		for(i = 0; i < (*cmd)->argc; i++) {
+			if(i == arg_idx) {
+				for(j = 0; j < item->argc; j++) {
+					ct->argv[arg_idx + j] = strdup(item->expand_argv[j]);
+				}
+			} else if(i < arg_idx) {
+				ct->argv[i] = strdup((*cmd)->argv[i]);
+			} else {
+				ct->argv[i + item->argc - 1] = strdup((*cmd)->argv[i]);
+			}
 		}
 		ReleaseCmdT(cmd);
 		*cmd = ct;
 	}
+	return ret;
 }
 
 void checkAlias(commandT **cmd, int n) {
-	int i;
+	int i, j, base;
 	for(i = 0; i < n; i++) {
-		expandAlias(cmd + i);	
+		base = 0;
+		for(j = 0; j + base < cmd[i]->argc; j++) {
+			base += expandAlias(cmd + i, j + base);	
+			subTelda(&(cmd[i]->argv[j+base]));
+		}
 	}
 }
 

@@ -122,6 +122,7 @@ static struct alias_item *_find;
 static char *_find_key;
 
 static int traverse_to_find(struct alias_item *item) {
+	assert(item && item->key);
 	if(!strcmp(item->key, _find_key)) {
 		_find = item;
 		return 0;
@@ -130,6 +131,7 @@ static int traverse_to_find(struct alias_item *item) {
 }
 
 struct alias_item *find_alias(char *key) {
+	assert(key);
 	_find = NULL;
 	_find_key = key;
 	traverse_alias_list(traverse_to_find);
