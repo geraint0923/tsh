@@ -120,7 +120,7 @@ int main (int argc, char *argv[])
     Interpret(cmdLine);
 
   }
-    CheckJobs();
+//    CheckJobs();
   destroy_job_list();
   destroy_alias_list();
 

@@ -359,7 +359,7 @@ static void waitForCmd() {
 				}		
 			} else {
 				set_done_by_pid(p);
-				CheckJobs();
+	//			CheckJobs();
 			}
 		}
 		
