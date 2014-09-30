@@ -23,8 +23,12 @@ static void cd_handler(commandT *cmd) {
 	//printf("change dir: %s\n", cmd->cmdline);
 	// TODO substitute the ~ character
 	int ret = 0;
+	struct passwd *pw;
 	if(cmd->argc > 1) {
 		ret = chdir(cmd->argv[1]);
+	} else {
+		pw = getpwuid(getuid());
+		chdir(pw->pw_dir);
 	}
 	if(ret)
 		perror("cd");

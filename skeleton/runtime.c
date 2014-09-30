@@ -421,7 +421,6 @@ void subTelda(char **str) {
 			strcpy(buff, pw->pw_dir);
 			strcat(buff, (*str)+1);
 			free(*str);
-			printf("free -> 0x%08x\n", *str);
 			*str = buff;
 		}
 	}
