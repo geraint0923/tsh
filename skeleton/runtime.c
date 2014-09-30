@@ -390,9 +390,9 @@ static void waitForCmd() {
 		if(current_fg_job->job_id == -1) {
 			add_bg_job(current_fg_job);
 			printStr("\n");
-			sprintf(buff, "[%d]   Stopped                 ", current_fg_job->job_id);
-			printStr(buff);
 		}
+		sprintf(buff, "[%d]   Stopped                 ", current_fg_job->job_id);
+		printStr(buff);
 		for(i = 0; i < current_fg_job->count; i++) {
 			sprintf(buff, "%s", current_fg_job->proc_seq[i].cmdline);
 			printStr(buff);
