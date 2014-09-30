@@ -95,12 +95,26 @@ struct alias_item *parse_alias(char *val) {
 
 
 void insert_alias_item(struct alias_item *item) {
-	struct list_item *li;
+	struct list_item *li, *cur, *prev;
+	struct alias_item *alias;
 	assert(alias_list && item);
 	li = create_list_item();
 	if(li) {
 		li->item_val = (void*)item;
-		list_append_item(alias_list, li);
+		// to make the list ordered by the alphabet
+		prev = alias_list;
+		cur = prev->next;
+		while(cur) {
+			alias = (struct alias_item*)cur->item_val;
+			if(strcmp(item->key, alias->key) > 0) {
+				prev = cur;
+				cur = cur->next;
+			} else
+				break;
+		}
+		prev->next = li;
+		li->next = cur;
+	//	list_append_item(alias_list, li);
 	}
 }
 
