@@ -22,15 +22,18 @@ void init_block_set() {
 
 void block_signals() {
 	sigprocmask(SIG_SETMASK,&block_set,&old_block_set);
-	signal(SIGCHLD, SIG_IGN);
+//	signal(SIGCHLD, SIG_IGN);
 }
 
 void unblock_signals() {
 	sigprocmask(SIG_SETMASK, &old_block_set, NULL);
-	signal(SIGCHLD, chld_handler);
+//	signal(SIGCHLD, chld_handler);
 }
 
 void int_handler(int no) {
+	if(current_fg_job && current_fg_job->group_id > 0) {
+		kill(-current_fg_job->group_id, SIGINT);
+	}
 	/*
 	int i;
 	if(current_fg_job) {
@@ -46,6 +49,9 @@ void int_handler(int no) {
 
 
 void stp_handler(int no) {
+	if(current_fg_job && current_fg_job->group_id > 0) {
+		kill(-current_fg_job->group_id, SIGTSTP);
+	}
 	/*
 	int i;
 	if(current_fg_job) {
@@ -60,9 +66,8 @@ void stp_handler(int no) {
 void chld_handler(int no) {
 	int stat;
 	pid_t pid;
-//	printf("in chld\n");
 	while((pid = waitpid(-1, &stat, WNOHANG)) > 0) {
-//		printf("000--%d\n", pid);
+		//printf("000--%d\n", pid);
 		set_done_by_pid(pid);
 	}
 //	printf("out chld\n");

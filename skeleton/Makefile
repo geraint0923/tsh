@@ -29,7 +29,8 @@ RM = rm
 MKDIR = mkdir
 TAR = tar cvf
 COMPRESS = gzip
-CFLAGS = -g -Wall -O2 -D HAVE_CONFIG_H
+#CFLAGS = -g -Wall -O2 -D HAVE_CONFIG_H
+CFLAGS = -g -Wall -O0 -D HAVE_CONFIG_H
 
 DELIVERY = Makefile *.h *.c test_type
 PROGS = tsh

@@ -52,11 +52,11 @@ static void fg_handler(commandT *cmd) {
 		return;
 	current_fg_job = job;
 	for(num = 0; num < job->count; num++) {
-		printf("%s", job->proc_seq[num].cmdline);
+		fprintf(stdout, "%s", job->proc_seq[num].cmdline);
 		if(num != job->count-1)
-			printf(" | ");
+			fprintf(stdout, " | ");
 	}
-	printf("\n");
+	fprintf(stdout, "\n");
 	tcsetpgrp(STDIN_FILENO, current_fg_job->group_id);
 	job->bg = 0;
 	kill(-job->group_id, SIGCONT);
@@ -89,9 +89,9 @@ static int job_traverse(struct working_job *job) {
 	else
 		printf("  Stopped       ");
 	for(i = 0; i < job->count; i++) {
-		printf("%s ", job->proc_seq[i].cmdline);
+		printf("%s", job->proc_seq[i].cmdline);
 		if(i != job->count - 1)
-			printf("| ");
+			printf(" | ");
 	}
 	if(job->bg) 
 		printf(" &");

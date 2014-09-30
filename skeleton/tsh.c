@@ -89,14 +89,15 @@ int main (int argc, char *argv[])
     /* checks the status of background jobs */
 	  // if there is any process recycled by shell
 	  // then print out
-    CheckJobs();
 
 	  //TODO unblock the signals
+	  chld_handler(0);
+    CheckJobs();
 	  unblock_signals();
-	  
+	//chld_handler(0);	  
 
 	  /* print prompt */
-	  printf("%s@localhost %s $ ", getLogin(), getCurrentWorkingDir());
+	  //printf("%s@localhost %s $ ", getLogin(), getCurrentWorkingDir());
 
     /* read command line */
 	tcsetpgrp(STDIN_FILENO, getpgrp());
@@ -120,6 +121,7 @@ int main (int argc, char *argv[])
     Interpret(cmdLine);
 
   }
+    CheckJobs();
   destroy_job_list();
   destroy_alias_list();
 

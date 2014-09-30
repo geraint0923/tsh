@@ -331,13 +331,16 @@ static void waitForCmd() {
 			//printf("reap %d cmd => %s\n", proc->pid, proc->cmdline);
 		}
 	}
+	//printf("done => %d %d\n", done_count, current_fg_job->count);
 	while(done_count < current_fg_job->count) {
 		//printf("wait for you: %d %d\n", done_count, current_fg_job->count);
 		p = waitpid(-current_fg_job->group_id, &stat, WUNTRACED);	
+		//printf("waitpid => %d\n", p);
 		if(WIFEXITED(stat) || WIFSIGNALED(stat)) {
 			done_count++;
 			if(p != -1) {
 				for(i = 0; i < current_fg_job->count; i++) {
+					//printf("pid haha: %d\n", current_fg_job->proc_seq[i].pid);
 					if(current_fg_job->proc_seq[i].pid == p)
 						current_fg_job->proc_seq[i].done = 1;
 				}
@@ -353,21 +356,22 @@ static void waitForCmd() {
 		printf("stopped by signal %d\n", WSTOPSIG(stat));	
 	}
 	*/
+	//printf("after done => %d %d\n", done_count, current_fg_job->count);
 	if(done_count == current_fg_job->count) {
 		remove_bg_job(current_fg_job);
 		release_working_job(current_fg_job);
 	} else {
 		if(current_fg_job->job_id == -1) {
 			add_bg_job(current_fg_job);
-			printf("[%d]  Stopped      ", current_fg_job->job_id);
+			fprintf(stdout, "[%d]  Stopped      ", current_fg_job->job_id);
 			
 		}
 		for(i = 0; i < current_fg_job->count; i++) {
-			printf("%s ", current_fg_job->proc_seq[i].cmdline);
+			fprintf(stdout, "%s ", current_fg_job->proc_seq[i].cmdline);
 			if(i != current_fg_job->count-1)
-				printf("| ");
+				fprintf(stderr, "| ");
 		}
-		printf("\n");
+		fprintf(stderr, "\n");
 	}
 }
 
@@ -453,7 +457,7 @@ void RunCmd(commandT** cmd, int n)
   }
   job = generateJob(cmd, n);
 
-  if(job != current_fg_job)
+  if(current_fg_job && job != current_fg_job)
 	  release_working_job(job);
   cleanAll(cmd, n);
   if(current_fg_job/* && current_fg_job == job*/) {
@@ -467,7 +471,7 @@ void RunCmd(commandT** cmd, int n)
   } else {
 	  //TODO add to bg_job_list
 	  add_bg_job(job);
-	  printf("[%d] %d\n", job->job_id, job->proc_seq[job->count-1].pid);
+	  //fprintf(stderr, "[%d] %d\n", job->job_id, job->proc_seq[job->count-1].pid);
   }
   current_fg_job = NULL;
   //tcsetpgrp(STDIN_FILENO, getpgrp());
@@ -638,6 +642,7 @@ static void Exec(commandT* cmd, bool forceFork)
 				setpgid(pid, current_group_id);
 			tcsetpgrp(STDIN_FILENO, current_group_id);
 			kill(pid, SIGCONT);
+		//	printf("here pid %d\n", pid);
 		}
 		//TODO deal with the pid
 		//FIXME
@@ -688,13 +693,15 @@ static int judge_done_func(struct working_job *job) {
 		if(job->proc_seq[i].done)
 			done_count++;
 	}
+		//printf("job %d => %d %d\n", job->job_id, done_count, job->count);
 	if(done_count == job->count) {
-		printf("[%d] Done           ", job->job_id);
+		//printf("job %d done\n", job->job_id);
+		//fprintf(stderr, "[%d] Done           ", job->job_id);
 		for(i = 0; i < job->count; i++) {
-			printf("%s", job->proc_seq[i].cmdline);
+//			fprintf(stderr, "%s", job->proc_seq[i].cmdline);
 			if(i != job->count-1)
 				printf(" | ");
-			printf("\n");
+			//fprintf(stderr, "\n");
 		}
 		remove_bg_job(job);
 		release_working_job(job);
@@ -704,6 +711,7 @@ static int judge_done_func(struct working_job *job) {
 
 void CheckJobs()
 {
+	//printf("CheckJobs Now\n");
 	traverse_bg_job_list(judge_done_func);
 }
 
