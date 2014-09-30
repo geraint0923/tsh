@@ -71,11 +71,11 @@
 #define NBUILTINCOMMANDS (sizeof BuiltInCommands / sizeof(char*))
 
 /*
-typedef struct bgjob_l {
-  pid_t pid;
-  struct bgjob_l* next;
-} bgjobL;
-*/
+   typedef struct bgjob_l {
+   pid_t pid;
+   struct bgjob_l* next;
+   } bgjobL;
+   */
 
 struct io_config default_io_config = { 0, 1 };
 
@@ -255,7 +255,7 @@ static int pipeCmd(commandT **cmd, int n) {
 	fd_count = 0;
 	for(i = 0; i < n; i++) {
 		cmd[i]->io_cfg.input_fd = pp[0];
-//		cmd[i]->useless_fd[0] = pp[1];
+		//		cmd[i]->useless_fd[0] = pp[1];
 		if(i != n-1) {
 			//TODO genterate a pair of pipe
 			//FIXME for a piped program, only one fd 
@@ -266,7 +266,7 @@ static int pipeCmd(commandT **cmd, int n) {
 		} else
 			pp[1] = default_io_config.output_fd;
 		cmd[i]->io_cfg.output_fd = pp[1];
-//		cmd[i]->useless_fd[1] = pp[0];
+		//		cmd[i]->useless_fd[1] = pp[0];
 	}
 	if(ret)
 		perror("pipe");
@@ -318,38 +318,44 @@ static void waitForCmd() {
 	pid_t p;
 	struct working_proc *proc;
 	assert(current_fg_job);
-//	printf("count ===>>> %d\n", current_fg_job->count);
+	//	printf("count ===>>> %d\n", current_fg_job->count);
 	for(i = 0; i < current_fg_job->count; i++) {
 		proc = &(current_fg_job->proc_seq[i]);
 		assert(proc);
-//		printf("proc => 0x%08x\n", proc);
+		//		printf("proc => 0x%08x\n", proc);
 		if(proc->done) {
 			done_count++;
 			//waitpid(proc->pid, &stat, 0);
 			//ret = waitpid(, &status, WUNTRACED | WCONTINUED);
-	//		wait(&stat);
+			//		wait(&stat);
 			//printf("reap %d cmd => %s\n", proc->pid, proc->cmdline);
 		}
 	}
 	//printf("done => %d %d\n", done_count, current_fg_job->count);
 	while(done_count < current_fg_job->count) {
 		//printf("wait for you: %d %d\n", done_count, current_fg_job->count);
-		p = waitpid(-current_fg_job->group_id, &stat, WUNTRACED);	
-		//printf("waitpid => %d\n", p);
-		if(WIFEXITED(stat) || WIFSIGNALED(stat)) {
-			done_count++;
-			if(p != -1) {
-				for(i = 0; i < current_fg_job->count; i++) {
-					//printf("pid haha: %d\n", current_fg_job->proc_seq[i].pid);
-					if(current_fg_job->proc_seq[i].pid == p)
-						current_fg_job->proc_seq[i].done = 1;
+		p = waitpid(-1, &stat, WUNTRACED);	
+//		printf("waitpid => %d\n", p);
+		if(p > 0) {
+			for(i = 0; i < current_fg_job->count; i++) {
+				if(current_fg_job->proc_seq[i].pid == p) {
+					break;
 				}
 			}
-		//	printf("killed by signal %d\n", WTERMSIG(stat));
-		} else if(WIFSTOPPED(stat)) {
-//			printf("stopped by signal %d\n", WSTOPSIG(stat));
-			break;
+			if(i < current_fg_job->count) {
+				// reaped process in current working job
+				done_count++;
+				if(WIFEXITED(stat) || WIFSIGNALED(stat)) {
+					current_fg_job->proc_seq[i].done = 1;
+				} else if(WIFSTOPPED(stat)) {
+					break;
+				}		
+			} else {
+				set_done_by_pid(p);
+				CheckJobs();
+			}
 		}
+		
 	}
 	/*
 	if(WIFSTOPPED(stat))  {
@@ -369,9 +375,9 @@ static void waitForCmd() {
 		for(i = 0; i < current_fg_job->count; i++) {
 			fprintf(stdout, "%s ", current_fg_job->proc_seq[i].cmdline);
 			if(i != current_fg_job->count-1)
-				fprintf(stderr, "| ");
+				fprintf(stdout, "| ");
 		}
-		fprintf(stderr, "\n");
+		fprintf(stdout, "\n");
 	}
 }
 
@@ -620,7 +626,7 @@ static void Exec(commandT* cmd, bool forceFork)
 				close(fd);
 			}
 			if(cmd->is_redirect_out) {
-				fd = open(cmd->redirect_out, O_APPEND | O_CREAT | O_WRONLY,
+				fd = open(cmd->redirect_out, O_TRUNC | O_CREAT | O_WRONLY,
 						S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
 				dup2(fd, 1);
 				close(fd);
@@ -696,12 +702,12 @@ static int judge_done_func(struct working_job *job) {
 		//printf("job %d => %d %d\n", job->job_id, done_count, job->count);
 	if(done_count == job->count) {
 		//printf("job %d done\n", job->job_id);
-		//fprintf(stderr, "[%d] Done           ", job->job_id);
+		fprintf(stdout, "[%d]   Done                    ", job->job_id);
 		for(i = 0; i < job->count; i++) {
-//			fprintf(stderr, "%s", job->proc_seq[i].cmdline);
+			fprintf(stdout, "%s", job->proc_seq[i].cmdline);
 			if(i != job->count-1)
 				printf(" | ");
-			//fprintf(stderr, "\n");
+			fprintf(stdout, "\n");
 		}
 		remove_bg_job(job);
 		release_working_job(job);

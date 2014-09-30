@@ -74,7 +74,7 @@ int main (int argc, char *argv[])
   if (signal(SIGTSTP, stp_handler) == SIG_ERR) PrintPError("SIGTSTP");
   if (signal(SIGTTIN, SIG_IGN) == SIG_ERR) PrintPError("SIGTSTP");
   if (signal(SIGTTOU, SIG_IGN) == SIG_ERR) PrintPError("SIGTSTP");
-  //if (signal(SIGCHLD, chld_handler) == SIG_ERR) PrintPError("SIGCHLD");
+  if (signal(SIGCHLD, chld_handler) == SIG_ERR) PrintPError("SIGCHLD");
   //
   //tcsetpgrp (STDIN_FILENO, getpgrp());
   
@@ -91,9 +91,8 @@ int main (int argc, char *argv[])
 	  // then print out
 
 	  //TODO unblock the signals
-	  chld_handler(0);
-    CheckJobs();
 	  unblock_signals();
+	  chld_handler(0);
 	//chld_handler(0);	  
 
 	  /* print prompt */
@@ -103,9 +102,6 @@ int main (int argc, char *argv[])
 	tcsetpgrp(STDIN_FILENO, getpgrp());
     getCommandLine(&cmdLine, BUFSIZE);
 
-    //TODO block the signals
-    block_signals();
-
 
 
     if(strcmp(cmdLine, "exit") == 0)
@@ -113,6 +109,9 @@ int main (int argc, char *argv[])
       forceExit=TRUE;
       continue;
     }
+
+    //TODO block the signals
+    block_signals();
 
 
 

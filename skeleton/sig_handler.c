@@ -70,6 +70,7 @@ void chld_handler(int no) {
 		//printf("000--%d\n", pid);
 		set_done_by_pid(pid);
 	}
+	CheckJobs();
 //	printf("out chld\n");
 //	printf("reap a process\n");
 }

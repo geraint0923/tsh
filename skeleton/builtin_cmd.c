@@ -85,9 +85,9 @@ static int job_traverse(struct working_job *job) {
 	printf("[%d] ", job->job_id);
 	//TODO print the statue of this job, like running, stopped
 	if(job->bg) 
-		printf("  Running       ");
+		printf("  Running                 ");
 	else
-		printf("  Stopped       ");
+		printf("  Stopped                 ");
 	for(i = 0; i < job->count; i++) {
 		printf("%s", job->proc_seq[i].cmdline);
 		if(i != job->count - 1)
@@ -104,7 +104,7 @@ static void jobs_handler(commandT *cmd) {
 }
 
 static int alias_traverse_func(struct alias_item *item) {
-	printf("%s=%s\n", item->key, item->val);
+	printf("alias %s=%s\n", item->key, item->val);
 	return 1;
 }
 
