@@ -1,17 +1,13 @@
 .\" Process this file with
 .\" groff -man -Tascii foo.1
 .\"
-.TH FOO 1 "MARCH 1995" Linux "User Manuals"
+.TH TSH 1 "OCT 2014" Linux "User Manuals"
 .SH NAME
-foo \- frobnicate the bar library
+tsh \- Tiny Shell for Operating Systems project
 .SH SYNOPSIS
-.B foo [-bar] [-c
-.I config-file
-.B ]
-.I file
-.B ...
+.B ./tsh
 .SH DESCRIPTION
-.B foo
+.B tsh
 frobnicates the bar library by tweaking internal
 symbol tables. By default it parses all baz segments
 and rearranges them in reverse order by time for the
@@ -19,60 +15,64 @@ and rearranges them in reverse order by time for the
 linker to find them. The symdef entry is then compressed
 using the WBG (Whiz-Bang-Gizmo) algorithm.
 All files are processed in the order specified.
-.SH OPTIONS
-.IP -b
-Do not write `busy' to stdout while processing.
-.IP "-c config-file"
-Use the alternate system wide
-.I config-file
-instead of
-.IR /etc/foo.conf .
-This overrides any
-.B FOOCONF
-environment variable.
-.IP -a
-In addition to the baz segments, also parse the
-blurfl headers.
-.IP -r
-Recursive mode. Operates as fast as lightning
-at the expense of a megabyte of virtual memory.
-.SH FILES
-.I /etc/foo.conf
-.RS
-The system wide configuration file. See
-.BR foo (5)
-for further details.
-.RE
-.I ~/.foorc
-.RS
-Per user configuration file. See
-.BR foo (5)
-for further details.
+.\"SH OPTIONS
+.SH BUILTIN COMMANDS
+.IP "cd [DIRECTORY]"
+Change the current working directory specified as
+.B DIRECTORY.
+If no argument is provided by user, then this command
+will use the home directory of current user by default.
+.IP "echo [ARGUMENTS] ..."
+This command will print all the provided arguments with
+space as delimiter, and finnaly print a new line.
+.IP "fg JOB-NUMBER"
+.B fg
+command take a positive integer argument as job number,
+and fetch that background job with the specified job 
+number to foreground.
+.IP "bg JOB-NUMBER"
+.B bg
+command take a positive integer argument as job number,
+and let that background job with the specified job number
+continue running at background status.
+.IP jobs
+Print all the jobs with different status, such as
+Done, Stopped, Running.
+.\".SH FILES
+.\".I /etc/foo.conf
+.\".RS
+.\"The system wide configuration file. See
+.\".BR foo (5)
+.\"for further details.
+.\".RE
+.\".I ~/.foorc
+.\".RS
+.\"Per user configuration file. See
+.\".BR foo (5)
+.\"for further details.
 .SH ENVIRONMENT
-.IP FOOCONF
-If non-null the full pathname for an alternate system wide
-.IR foo.conf .
-Overridden by the
-.B -c
-option.
-.SH DIAGNOSTICS
-The following diagnostics may be issued on stderr:
- 
-Bad magic number.
-.RS
-The input file does not look like an archive file.
-.RE
-Old style baz segments.
-.RS
-.B foo
-can only handle new style baz segments. COBOL
-object libraries are not supported in this version.
+.IP PATH
+This environment variable is used by
+.IR tsh
+to retrieve the external executable file search path.
+.\".SH DIAGNOSTICS
+.\"The following diagnostics may be issued on stderr:
+.\" 
+.\"Bad magic number.
+.\".RS
+.\"The input file does not look like an archive file.
+.\".RE
+.\"Old style baz segments.
+.\".RS
+.\".B foo
+.\"can only handle new style baz segments. COBOL
+.\"object libraries are not supported in this version.
 .SH BUGS
 The command name should have been chosen more carefully
 to reflect its purpose.
 .SH AUTHOR
-Jens Schweikhardt <howto at schweikhardt dot net>
-.SH "SEE ALSO"
-.BR bar (1),
-.BR foo (5),
-.BR xyzzy (1)
+Yang Yang <yangyang2016@u.northwestern.edu>
+.\"SH "SEE ALSO"
+.\"BR bar (1),
+.\"BR foo (5),
+.\"BR xyzzy (1)
