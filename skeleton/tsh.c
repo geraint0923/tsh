@@ -93,7 +93,6 @@ int main (int argc, char *argv[])
 	  //TODO unblock the signals
 	  unblock_signals();
 	  chld_handler(0);
-	//chld_handler(0);	  
 
 	  /* print prompt */
 	  //printf("%s@localhost %s $ ", getLogin(), getCurrentWorkingDir());
@@ -121,7 +120,6 @@ int main (int argc, char *argv[])
     Interpret(cmdLine);
 
   }
-//    CheckJobs();
   destroy_job_list();
   destroy_alias_list();
 
@@ -129,9 +127,3 @@ int main (int argc, char *argv[])
   free(cmdLine);
   return 0;
 } /* end main */
-
-/*
-static void sig(int signo)
-{
-}
-*/

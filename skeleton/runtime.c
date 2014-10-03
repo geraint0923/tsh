@@ -319,7 +319,6 @@ static struct working_job *generateJob(commandT **cmd, int n) {
 				job->bg = 1;
 			} else {
 				current_fg_job = job;
-				//printf("set current fg\n");
 			}
 	}
 	return job;
@@ -338,24 +337,15 @@ static void waitForCmd() {
 	pid_t p;
 	struct working_proc *proc;
 	assert(current_fg_job);
-	//	printf("count ===>>> %d\n", current_fg_job->count);
 	for(i = 0; i < current_fg_job->count; i++) {
 		proc = &(current_fg_job->proc_seq[i]);
 		assert(proc);
-		//		printf("proc => 0x%08x\n", proc);
 		if(proc->done) {
 			done_count++;
-			//waitpid(proc->pid, &stat, 0);
-			//ret = waitpid(, &status, WUNTRACED | WCONTINUED);
-			//		wait(&stat);
-			//printf("reap %d cmd => %s\n", proc->pid, proc->cmdline);
 		}
 	}
-	//printf("done => %d %d\n", done_count, current_fg_job->count);
 	while(done_count < current_fg_job->count) {
-		//printf("wait for you: %d %d\n", done_count, current_fg_job->count);
 		p = waitpid(-1, &stat, WUNTRACED);	
-//		printf("waitpid => %d\n", p);
 		if(p > 0) {
 			for(i = 0; i < current_fg_job->count; i++) {
 				if(current_fg_job->proc_seq[i].pid == p) {
@@ -372,18 +362,10 @@ static void waitForCmd() {
 				}		
 			} else {
 				set_done_by_pid(p);
-	//			CheckJobs();
 			}
 		}
 		
 	}
-	/*
-	if(WIFSTOPPED(stat))  {
-		//printf("stopped by signal %d\n", WSTOPSIG(stat));	
-		add_bg_job(current_fg_job);
-	}
-	*/
-	//printf("after done => %d %d\n", done_count, current_fg_job->count);
 	if(done_count == current_fg_job->count) {
 		remove_bg_job(current_fg_job);
 		release_working_job(current_fg_job);
@@ -432,11 +414,8 @@ int expandAlias(commandT **cmd, int arg_idx) {
 	commandT *ct;
 	item = find_alias((*cmd)->argv[arg_idx]);
 	if(item) {
-	//	printf("find alias ==>> %s\n", item->val);	
 		ct = CreateCmdT(item->argc - 1 + (*cmd)->argc);
 		ret = item->argc - 1;
-		// expand cmdline
-		//len = strlen(item->val)+strlen((*cmd)->cmdline)+3;	
 		len = 0;
 		for(i = 0; i < (*cmd)->argc; i++) {
 			if(i != arg_idx)
@@ -460,9 +439,6 @@ int expandAlias(commandT **cmd, int arg_idx) {
 					strcat(ct->cmdline, " ");
 			}
 		}
-//		strcat(ct->cmdline, strlen(item->key)+(*cmd)->cmdline);
-//		printf("whole_line: %s\n", ct->cmdline);
-		//free((*cmd)->cmdline);
 
 		ct->redirect_in = (*cmd)->redirect_in;
 		ct->redirect_out = (*cmd)->redirect_out;
@@ -471,16 +447,7 @@ int expandAlias(commandT **cmd, int arg_idx) {
 		ct->bg = (*cmd)->bg;
 		ct->argc = item->argc - 1 + (*cmd)->argc;
 		ct->io_cfg = (*cmd)->io_cfg;
-		/*
-		for(i = 0; i < item->argc; i++) {
-			ct->argv[i] = strdup(item->expand_argv[i]);
-			printf("ct->argv[%d] = %s 0x%08x\n", i, ct->argv[i], ct->argv[i]);
-		}
-		for(i = 0; i < (*cmd)->argc; i++) {
-			ct->argv[item->argc + i - 1] = strdup((*cmd)->argv[i]);
-		//	printf("ct->argv[%d] = %s\n", item->argc+i-1, ct->argv[item->argc+i-1]);
-		}
-		*/
+		
 		for(i = 0; i < (*cmd)->argc; i++) {
 			if(i == arg_idx) {
 				for(j = 0; j < item->argc; j++) {
@@ -517,29 +484,15 @@ void RunCmd(commandT** cmd, int n)
   current_group_id = -1;
   total_task = n;
   checkAlias(cmd, n);
-  /*
-  for(i = 0; i < n; i++) {
-	  printf("[%d] cmd => %s\n", i, cmd[i]->cmdline);
-  }
-  */
   if(preProcCmd(cmd, n)) {
 	  cleanAll(cmd, n);
 	  return;
   }
-  /*
-  if(n == 1)
-    RunCmdFork(cmd[0], TRUE);
-  else{
-    RunCmdPipe(cmd[0], cmd[1]);
-    for(i = 0; i < n; i++)
-      ReleaseCmdT(&cmd[i]);
-  }
-  */
+
   for(i = 0; i < n; i++) {
 	  RunCmdFork(cmd[i], TRUE);
 	  if(current_fg_job)
 		  break;
-	  //printf("%s => bg = %d\n", cmd[i]->cmdline, cmd[i]->bg);
   }
   job = generateJob(cmd, n);
 
@@ -548,19 +501,11 @@ void RunCmd(commandT** cmd, int n)
   cleanAll(cmd, n);
   if(current_fg_job/* && current_fg_job == job*/) {
 	  waitForCmd();
-	  /*
-	  if(current_fg_job) {
-		  release_working_job(job);
-		  current_fg_job = NULL;
-	  }
-	  */
   } else {
 	  //TODO add to bg_job_list
 	  add_bg_job(job);
-	  //fprintf(stderr, "[%d] %d\n", job->job_id, job->proc_seq[job->count-1].pid);
   }
   current_fg_job = NULL;
-  //tcsetpgrp(STDIN_FILENO, getpgrp());
 }
 
 void RunCmdFork(commandT* cmd, bool fork)
@@ -578,25 +523,6 @@ void RunCmdFork(commandT* cmd, bool fork)
     RunExternalCmd(cmd, fork);
   }
 }
-
-/*
-void RunCmdBg(commandT* cmd)
-{
-  // TODO
-}
-
-void RunCmdPipe(commandT* cmd1, commandT* cmd2)
-{
-}
-
-void RunCmdRedirOut(commandT* cmd, char* file)
-{
-}
-
-void RunCmdRedirIn(commandT* cmd, char* file)
-{
-}
-*/
 
 
 /*Try to run an external command*/
@@ -669,23 +595,14 @@ static void Exec(commandT* cmd, bool forceFork)
 	pid_t pid;
 	int fd, i;
 	assert(forceFork == TRUE);
-	/*
-	for(i = 0; i < cmd->argc; i++) {
-		printf("ee => %d == %ss\n", i, cmd->argv[i]);
-	}
-	*/
+
 	if(forceFork) {
 		if(!(pid = fork())) {
 			if(current_group_id == -1) {
 				setpgid(0, 0);
 			} else
 				setpgid(0, current_group_id);
-			/*
-			signal(SIGINT,  SIG_IGN);
-			signal(SIGTSTP, SIG_IGN);
-			signal(SIGTTOU, SIG_IGN);
-			signal(SIGTTIN, SIG_IGN);
-			*/
+
 			if(!cmd->bg) {
 				tcsetpgrp(STDIN_FILENO, getpgrp());
 			}
@@ -694,11 +611,9 @@ static void Exec(commandT* cmd, bool forceFork)
 			//TODO deal with pipe and redirect
 			if(cmd->io_cfg.input_fd != 0) {
 				dup2(cmd->io_cfg.input_fd, 0);
-			//	close(cmd->io_cfg.input_fd);
 			}
 			if(cmd->io_cfg.output_fd != 1) {
 				dup2(cmd->io_cfg.output_fd, 1);
-			//	close(cmd->io_cfg.output_fd);
 			}
 
 			//TODO deal with file redirect
@@ -730,12 +645,9 @@ static void Exec(commandT* cmd, bool forceFork)
 				setpgid(pid, current_group_id);
 			tcsetpgrp(STDIN_FILENO, current_group_id);
 			kill(pid, SIGCONT);
-		//	printf("here pid %d\n", pid);
 		}
 		//TODO deal with the pid
-		//FIXME
 		cmd->pid = pid;
-//		printf("pid => %d\n", pid);
 	}
 }
 
@@ -782,9 +694,7 @@ static int judge_done_func(struct working_job *job) {
 		if(job->proc_seq[i].done)
 			done_count++;
 	}
-		//printf("job %d => %d %d\n", job->job_id, done_count, job->count);
 	if(done_count == job->count) {
-		//printf("job %d done\n", job->job_id);
 		sprintf(buff, "[%d]   Done                    ", job->job_id);
 		printStr(buff);
 		for(i = 0; i < job->count; i++) {
@@ -801,7 +711,6 @@ static int judge_done_func(struct working_job *job) {
 
 void CheckJobs()
 {
-	//printf("CheckJobs Now\n");
 	traverse_bg_job_list(judge_done_func);
 }
 

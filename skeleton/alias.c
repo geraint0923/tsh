@@ -49,7 +49,6 @@ static void parse_alias_value(char *val, struct alias_item *item) {
 			if(val[i] != 0 && !ss) {
 				ss = 1;
 				item->expand_argv[count++] = strdup(val + i);
-			//	printf("in parsing => %d === %s\n", count-1, item->expand_argv[count-1]);
 			} else if(val[i] == 0) {
 				ss = 0;
 			}
@@ -61,7 +60,6 @@ struct alias_item *parse_alias(char *val) {
 	struct alias_item *item;
 	char *dump = NULL;
 	int i, len, stop;
-	//printf("val ==> %s\n", val);
 	assert(alias_list && val);
 	len = strlen(val);
 	item = (struct alias_item*)malloc(sizeof(struct alias_item));
@@ -79,13 +77,6 @@ struct alias_item *parse_alias(char *val) {
 			item->key = strdup(dump);
 			item->val = strdup(dump+stop);
 			parse_alias_value(dump+stop, item);
-
-			/*
-			for(i = 0; i < item->argc; i++) {
-				printf("parse result: %d => %s\n", i, item->expand_argv[i]);
-			}
-			*/
-
 			free(dump);
 		}
 		return item;
@@ -114,7 +105,6 @@ void insert_alias_item(struct alias_item *item) {
 		}
 		prev->next = li;
 		li->next = cur;
-	//	list_append_item(alias_list, li);
 	}
 }
 

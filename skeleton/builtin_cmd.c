@@ -20,7 +20,6 @@ static void printStr(const char *str) {
 }
 
 static void cd_handler(commandT *cmd) {	
-	//printf("change dir: %s\n", cmd->cmdline);
 	// TODO substitute the ~ character
 	int ret = 0;
 	struct passwd *pw;
@@ -57,14 +56,6 @@ static void fg_handler(commandT *cmd) {
 	if(!job)
 		return;
 	current_fg_job = job;
-	/*
-	for(num = 0; num < job->count; num++) {
-		printStr(job->proc_seq[num].cmdline);
-		if(num != job->count-1)
-			printStr(" | ");
-	}
-	printStr("\n");
-	*/
 	tcsetpgrp(STDIN_FILENO, current_fg_job->group_id);
 	job->bg = 0;
 	kill(-job->group_id, SIGCONT);
@@ -89,10 +80,6 @@ static int job_traverse(struct working_job *job) {
 		if(job->proc_seq[i].done)
 			done_count++;
 	}
-	/*
-	if(done_count == job->count)
-		return 1;
-		*/
 	sprintf(buff, "[%d] ", job->job_id);
 	printStr(buff);
 	//TODO print the statue of this job, like running, stopped
@@ -141,12 +128,6 @@ static void alias_handler(commandT *cmd) {
 		traverse_alias_list(alias_traverse_func);
 		return;
 	}
-	/*
-	printf("cmdline: %s\n", cmd->cmdline);
-	for(i = 0; i < cmd->argc; i++) {
-		printf("argv[%d]: %s\n", i, cmd->argv[i]);
-	}
-	*/
 	for(i = 5; i < strlen(cmd->cmdline); i++) {
 		if(cmd->cmdline[i] != ' ') {
 			start = i;
@@ -155,11 +136,6 @@ static void alias_handler(commandT *cmd) {
 	}
 	item = parse_alias(cmd->cmdline + start);
 	if(item) {
-		/*
-		for(i = 0; i < item->argc; i++) {
-			printf("expand argv %d => %s\n", i, item->expand_argv[i]);
-		}
-		*/
 		insert_alias_item(item);
 	}
 }
