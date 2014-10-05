@@ -7,7 +7,8 @@ tsh \- Tiny Shell for Operating Systems project
 .SH SYNOPSIS
 .B ./tsh
 .SH DESCRIPTION
-.B tsh is implemented to try to behave like a normal shell, 
+.B tsh 
+is implemented to try to behave like a normal shell, 
 for example, bash. In
 .B tsh, we implemented both the basic points and the extra points.
 We will try to give the details below.
@@ -15,8 +16,33 @@ We will try to give the details below.
 .IP "Basic Points"
 
 .BR "jobs control"
+function is provided in
+.B tsh
+, such as stopping a foreground process, terminating
+a running process, continuing a stopped process, and fetching
+a background to foreground. After
+.B fork(2)
+, we use
+.B setpgid(2)
+and
+.B tcsetpgrp(3)
+to setup a process group and foreground process group. We forward
+signals like
+.B SIGINT
+and 
+.B SIGTSTP
+to the foreground process group. We use
+.B sigprocmask(2)
+to ignore
+.B SIGCHLD
+when beginning to process the input commands, and unblock the signal
+before waiting for the commands input.
 
 .BR "builtin commands"
+can be executed in
+.B tsh
+because we maintain a builtin commands list in the file 
+.IR builtin_cmd.{c|h} .
 
 .IP "Extra Points"
 
@@ -96,7 +122,7 @@ Print all the configured alias pari in dictionary order
 if no argument is provided. And add the provided key
 and value pair to the alias list when provided.
 
-.IP unalias KEY
+.IP "unalias KEY"
 Remove the corresponding key and value pair in the alias list
 specified by key.
 
