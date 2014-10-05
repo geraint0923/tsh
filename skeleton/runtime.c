@@ -108,6 +108,7 @@ static int fd_table[1024];
 static int fd_count;
 
 
+// print a string using write system call to ensure immediate print
 static void printStr(const char *str) {
 	int ret = write(STDOUT_FILENO, str, strlen(str));
 	if(ret < 0)
@@ -121,6 +122,7 @@ void init_job_list() {
 
 static pid_t current_group_id;
 
+// get rid of the useless space at the end of a command string
 void stripSpace(char *line) {
 	int i, len;
 	assert(line);
@@ -142,7 +144,10 @@ struct working_job *create_working_job(commandT **cmd, int n) {
 	job->proc_seq = (struct working_proc*)malloc(sizeof(struct working_proc)*n);
 	job->count = n;
 	job->bg = 0;
+	// ensure the memory is allocated
 	assert(job->proc_seq);
+	
+	// to set working process one by one
 	for(i = 0; i < n; i++) {
 		stripSpace(cmd[i]->cmdline);
 		job->proc_seq[i].cmdline = strdup(cmd[i]->cmdline);
@@ -249,6 +254,7 @@ void traverse_bg_job_list(int (*func)(struct working_job*)) {
 	}
 }
 
+// release the background job list when quiing the tsh
 void destroy_job_list() {
 	struct list_item *item, *next;
 	assert(bg_job_list);
@@ -293,11 +299,12 @@ static int pipeCmd(commandT **cmd, int n) {
 }
 
 static int preProcCmd(commandT **cmd, int n) {
-	//TODO if anyone is background, then set all to background
-	//FIXME
 	return pipeCmd(cmd, n);
 }
 
+// close all the pipe file descriptor after fork
+// so that the processes reading from pipe 
+// could exit normally
 static void cleanPipe(commandT **cmd, int n) {
 	int i;
 	for(i = 0; i < n; i++) {
@@ -312,6 +319,9 @@ static struct working_job *generateJob(commandT **cmd, int n) {
 	int i;
 	struct working_job *job;
 	job = create_working_job(cmd, n);
+	// set the current forceground job
+	// only if it is not set
+	// because it could be set by fg command
 	if(!current_fg_job) {
 		for(i = 0; i < n; i++)
 			if(cmd[i]->bg) {
@@ -361,11 +371,16 @@ static void waitForCmd() {
 					break;
 				}		
 			} else {
+				// if the process is not in the current 
+				// foreground job then set that process's
+				// done flag to be true
 				set_done_by_pid(p);
 			}
 		}
 		
 	}
+	// if all the processes are done
+	// release all the allocated memory
 	if(done_count == current_fg_job->count) {
 		remove_bg_job(current_fg_job);
 		release_working_job(current_fg_job);
@@ -408,12 +423,16 @@ void subTelda(char **str) {
 	}
 }
 
+/*
+ * expand the command which have matched alias pair
+ */
 int expandAlias(commandT **cmd, int arg_idx) {
 	struct alias_item *item;
 	int i, len, j, ret = 0;
 	commandT *ct;
 	item = find_alias((*cmd)->argv[arg_idx]);
 	if(item) {
+		// create a new commandT for expanding
 		ct = CreateCmdT(item->argc - 1 + (*cmd)->argc);
 		ret = item->argc - 1;
 		len = 0;
@@ -448,6 +467,7 @@ int expandAlias(commandT **cmd, int arg_idx) {
 		ct->argc = item->argc - 1 + (*cmd)->argc;
 		ct->io_cfg = (*cmd)->io_cfg;
 		
+		// copy the arguments to the proper place
 		for(i = 0; i < (*cmd)->argc; i++) {
 			if(i == arg_idx) {
 				for(j = 0; j < item->argc; j++) {
@@ -465,6 +485,11 @@ int expandAlias(commandT **cmd, int arg_idx) {
 	return ret;
 }
 
+/*
+ * check the commands to
+ * see if there is any command
+ * matching alias pair
+ */
 void checkAlias(commandT **cmd, int n) {
 	int i, j, base;
 	for(i = 0; i < n; i++) {

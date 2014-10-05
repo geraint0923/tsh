@@ -152,6 +152,9 @@ static void unalias_handler(commandT *cmd) {
 }
 
 
+/*
+ * maintain the builtin command list
+ */
 struct builtin_cmd builtin_cmd_list[] = {
 	{
 		.cmd_name = "cd",

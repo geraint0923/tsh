@@ -12,6 +12,10 @@
 
 static sigset_t block_set, old_block_set;
 
+/*
+ * initialize the signal set which
+ * need to be blocked
+ */
 void init_block_set() {
 	sigemptyset(&block_set);
 	sigemptyset(&old_block_set);
@@ -20,16 +24,26 @@ void init_block_set() {
 	sigaddset(&block_set, SIGCHLD); 
 }
 
+/*
+ * begin to block the signal
+ * set in the signal set
+ */
 void block_signals() {
 	sigprocmask(SIG_SETMASK,&block_set,&old_block_set);
 //	signal(SIGCHLD, SIG_IGN);
 }
 
+/*
+ * restore to handle all the signal
+ */
 void unblock_signals() {
 	sigprocmask(SIG_SETMASK, &old_block_set, NULL);
 //	signal(SIGCHLD, chld_handler);
 }
 
+/*
+ * handler to SIGINT
+ */
 void int_handler(int no) {
 	if(current_fg_job && current_fg_job->group_id > 0) {
 		kill(-current_fg_job->group_id, SIGINT);
@@ -47,7 +61,9 @@ void int_handler(int no) {
 	*/
 }
 
-
+/*
+ * handler to SIGTSTP
+ */
 void stp_handler(int no) {
 	if(current_fg_job && current_fg_job->group_id > 0) {
 		if(kill(-current_fg_job->group_id, SIGTSTP))
@@ -64,6 +80,9 @@ void stp_handler(int no) {
 	*/
 }
 
+/*
+ * handler to SIGCHLD
+ */
 void chld_handler(int no) {
 	int stat;
 	pid_t pid;

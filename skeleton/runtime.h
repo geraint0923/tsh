@@ -57,12 +57,19 @@
 #include <unistd.h>
 #include "list.h"
 
+/*
+ * this struct take care of the file descriptors
+ * used to redirect and pipe
+ */
 struct io_config {
 	int input_fd;
 	int output_fd;
 };
+
+// default io config for normal process
 extern struct io_config default_io_config;
 
+// indicate the current foreground job
 extern struct working_job *current_fg_job;
 
 typedef struct command_t
@@ -79,6 +86,10 @@ typedef struct command_t
   char* argv[];
 } commandT;
 
+/*
+ * indicate a working job
+ * could be some commands as a line
+ */
 struct working_job {
 	int job_id;
 	pid_t group_id;
@@ -88,6 +99,9 @@ struct working_job {
 	int bg;
 };
 
+/*
+ * represent a process in a working job
+ */
 struct working_proc {
 	char *cmdline;
 	pid_t pid;
@@ -98,16 +112,22 @@ struct working_proc {
 /* to operate the foregound and background jobs list */
 extern void init_job_list();
 
+// allocate memory for a new working job
 extern struct working_job *create_working_job(commandT **cmd, int n);
 
+// add a working job to the background job list
 extern void add_bg_job(struct working_job *job);
 
+// remove working job from the background list
 extern void remove_bg_job(struct working_job *job);
 
+// reach a working by given pid
 extern struct working_job *find_bg_job_by_id(int job_id);
 
+// set the done flag of a process by given pid
 extern void set_done_by_pid(pid_t pid);
 
+// release a working job's memory
 extern void release_working_job(struct working_job *job);
 
 extern void traverse_bg_job_list(int (*func)(struct working_job*));
