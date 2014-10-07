@@ -493,7 +493,7 @@ int expandAlias(commandT **cmd, int arg_idx) {
 void checkAlias(commandT **cmd, int n) {
 	int i, j, base;
 	for(i = 0; i < n; i++) {
-		if(!strcmp(cmd[i]->argv[i], "unalias"))
+		if(!strcmp(cmd[i]->argv[0], "unalias"))
 			continue;
 		base = 0;
 		for(j = 0; j + base < cmd[i]->argc; j++) {
