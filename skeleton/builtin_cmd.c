@@ -142,11 +142,15 @@ static void alias_handler(commandT *cmd) {
 
 static void unalias_handler(commandT *cmd) {
 	struct alias_item *item;
+	char buff[128];
 	if(cmd->argc > 1) {
 		item = find_alias(cmd->argv[1]);
 		if(item) {
 			remove_alias_item(item);
 			release_alias_item(item);
+		} else {
+			sprintf(buff, "unalias: %s: not found\n", cmd->argv[1]);
+			printStr(buff);
 		}
 	}
 }
