@@ -36,13 +36,25 @@ to the foreground process group. We use
 to ignore
 .B SIGCHLD
 when beginning to process the input commands, and unblock the signal
-before waiting for the commands input.
+before waiting for the commands input. When
+.B SIGCHLD
+is blocked,
+.B waitForCmd()
+in
+.IR runtime.c
+will take over the task to reap the child processes. And this is the most
+elegant approach to avoid the race condition between waiting for foreground
+processes and reaping background processes.
 
 .BR "builtin commands"
 can be executed in
 .B tsh
-because we maintain a builtin commands list in the file 
+because we maintain a builtin commands array in the file 
 .IR builtin_cmd.{c|h} .
+With this design, we can add new builtin commands easily by
+just adding new array elements to the builtin commands array.
+And we can also have a common handle process for each builtin
+commands.
 
 .IP "Extra Points"
 
